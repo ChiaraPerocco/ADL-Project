@@ -1,0 +1,152 @@
+[
+  {
+    "objectID": "domain.html",
+    "href": "domain.html",
+    "title": "2  Domain",
+    "section": "",
+    "text": "2.1 Article Structure\n[How is the generated article structured?]",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Domain</span>"
+    ]
+  },
+  {
+    "objectID": "domain.html#data-set",
+    "href": "domain.html#data-set",
+    "title": "2  Domain",
+    "section": "2.2 Data Set",
+    "text": "2.2 Data Set\n[Describe the data set (source, size, examples, …)]\n\n\n\n\n\n\nTip\n\n\n\nYou can use figures and reference them in the text (but only outside of tip-sections :D):\n\n\n\n\n\n\n\n\nFigure 2.1: Elephants.\n\n\n\nThis is how references are used: Figure 2.1",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Domain</span>"
+    ]
+  },
+  {
+    "objectID": "summary.html",
+    "href": "summary.html",
+    "title": "1  Summary",
+    "section": "",
+    "text": "[Summary / abstract: what is the project about? (150-200 words)]",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Summary</span>"
+    ]
+  },
+  {
+    "objectID": "architecture.html",
+    "href": "architecture.html",
+    "title": "3  Architecture",
+    "section": "",
+    "text": "3.1 Overview\n[Give an overview of the architecture]",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Architecture</span>"
+    ]
+  },
+  {
+    "objectID": "architecture.html#modules",
+    "href": "architecture.html#modules",
+    "title": "3  Architecture",
+    "section": "3.2 Modules",
+    "text": "3.2 Modules\n[Describe the modules of your system. If you added/removed/changed modules, explain why and change the chapter structure accordingly. A module description contains: Role in the overall system, input/output data, data flow, used packages, specific design decisions, …]\n\n3.2.1 Webcam\n\n\n3.2.2 Object Detector\n[Also describe the used architectures (see team-project presentation) in short (most important advances)]\n\n\n\n\n\n\nTip\n\n\n\nYou can reference literature from bibtex files (references.bib). Example: Use Knuth (1984) for additional discussion of literate programming.\n\n\n\n\n3.2.3 Article Agent\n[Also describe the used tools (e.g. wikipedia) and the reason for that choice]\n\n\n3.2.4 Article Assembler\n[Also describe potential article templates/structures you designed]\n\n\n3.2.5 Diffusion Model\n[Also describe the used diffusion model]\n\n\n\n\n\n\nTip\n\n\n\nYou can also work with equations. Example: (Equation 3.1) is a mathematical model that seeks to explain the behavior of financial derivatives, most commonly options:\n\\[\n\\frac{\\partial \\mathrm C}{ \\partial \\mathrm t } + \\frac{1}{2}\\sigma^{2} \\mathrm S^{2}\n\\frac{\\partial^{2} \\mathrm C}{\\partial \\mathrm C^2}\n  + \\mathrm r \\mathrm S \\frac{\\partial \\mathrm C}{\\partial \\mathrm S}\\ =\n  \\mathrm r \\mathrm C\n\\tag{3.1}\\]\n\n\n\n\n\n\nKnuth, Donald E. 1984. “Literate Programming.” Comput. J. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Architecture</span>"
+    ]
+  },
+  {
+    "objectID": "evaluation.html",
+    "href": "evaluation.html",
+    "title": "4  Evaluation",
+    "section": "",
+    "text": "4.1 Image Classifier\n[Show evaluation results as described in the team-project slides]\n[Describe how you get to ds2 based on the results on ds1]",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Evaluation</span>"
+    ]
+  },
+  {
+    "objectID": "evaluation.html#article-agent",
+    "href": "evaluation.html#article-agent",
+    "title": "4  Evaluation",
+    "section": "4.2 Article Agent",
+    "text": "4.2 Article Agent\n[Show some best- and worst-case examples and their timings]",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Evaluation</span>"
+    ]
+  },
+  {
+    "objectID": "evaluation.html#diffusion-model",
+    "href": "evaluation.html#diffusion-model",
+    "title": "4  Evaluation",
+    "section": "4.3 Diffusion Model",
+    "text": "4.3 Diffusion Model\n[Show some generation results and timings]",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Evaluation</span>"
+    ]
+  },
+  {
+    "objectID": "evaluation.html#article-assembler",
+    "href": "evaluation.html#article-assembler",
+    "title": "4  Evaluation",
+    "section": "4.4 Article Assembler",
+    "text": "4.4 Article Assembler\n[Show some generation examples and timings that show how long the entire generation process takes]",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Evaluation</span>"
+    ]
+  },
+  {
+    "objectID": "manual.html",
+    "href": "manual.html",
+    "title": "5  Manual",
+    "section": "",
+    "text": "5.1 Installation\n[Describe the steps necessary to install the system, starting with cloning the git repository.]",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Manual</span>"
+    ]
+  },
+  {
+    "objectID": "manual.html#usage",
+    "href": "manual.html#usage",
+    "title": "5  Manual",
+    "section": "5.2 Usage",
+    "text": "5.2 Usage\n[Describe in detail the steps required to create an article].",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Manual</span>"
+    ]
+  },
+  {
+    "objectID": "team.html",
+    "href": "team.html",
+    "title": "6  Team Work",
+    "section": "",
+    "text": "6.1 Work Packages\n[Describe all work packages]\nTahble Table 6.1 contains all work packages defined for this project.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Team Work</span>"
+    ]
+  },
+  {
+    "objectID": "team.html#work-packages",
+    "href": "team.html#work-packages",
+    "title": "6  Team Work",
+    "section": "",
+    "text": "Table 6.1: Work packages.\n\n\n\n\n\n\n\n\n\nPackage No.\nDescription",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Team Work</span>"
+    ]
+  },
+  {
+    "objectID": "team.html#timeline",
+    "href": "team.html#timeline",
+    "title": "6  Team Work",
+    "section": "6.2 Timeline",
+    "text": "6.2 Timeline\n[Describe who worked on which work package and when]",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Team Work</span>"
+    ]
+  },
+  {
+    "objectID": "references.html",
+    "href": "references.html",
+    "title": "References",
+    "section": "",
+    "text": "Knuth, Donald E. 1984. “Literate Programming.” Comput.\nJ. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
+    "crumbs": [
+      "References"
+    ]
+  }
+]
