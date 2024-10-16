@@ -22,8 +22,7 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
 
     # Transformationen für Validierungsdaten
     valid_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.CenterCrop(224),# AlexNet erwartet eine Bildgröße von 227x227
+        transforms.Resize((224, 224)), # AlexNet erwartet eine Bildgröße von 227x227
         transforms.ToTensor(),
         normalize,
     ])
@@ -31,15 +30,16 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
     # Augmentierung für Trainingsdaten (falls aktiviert)
     if augment:
         train_transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ])
+        transforms.Resize((256, 256)),  # Resize to 256x256 first
+        transforms.RandomCrop(224, padding=4), #zufälliges zuschneiden auf 224x224
+        transforms.RandomHorizontalFlip(), #zufälliges horizontales spiegeln
+        transforms.ToTensor(),
+        normalize,
+    ])
+        
     else:
         train_transform = transforms.Compose([
             transforms.Resize((224, 224)),
-            transforms.CenterCrop(224),
             transforms.ToTensor(),
             normalize,
         ])
@@ -65,15 +65,11 @@ def get_test_loader(data_dir,
     )
 
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.CenterCrop(224),   #Bildgröße anpassen
+        transforms.Resize((224, 224)),   #Bildgröße anpassen
         transforms.ToTensor(),
         normalize,
     ])
     
-    input_image = Image.open(r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\dataset_final\testneu\Germany\SPR911.JPG')
-    input_tensor = transform(input_image)
-    input_batch = input_tensor.unsqueeze(0)
 
     # Lade den Testdatensatz
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
@@ -93,7 +89,7 @@ train_loader, valid_loader = get_train_valid_loader(
 )
 
 test_loader = get_test_loader(
-    data_dir=r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\dataset_final\testneu\Germany\SPR911.JPG',  # Pfad zu den Testdaten
+    data_dir=r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\dataset_final\testneu',  # Pfad zu den Testdaten
     batch_size=64
 )
 
@@ -126,7 +122,7 @@ class AlexNet(nn.Module):
             nn.MaxPool2d(kernel_size = 3, stride = 2))
         self.fc = nn.Sequential(
             nn.Dropout(0.5),
-            nn.Linear(9216, 4096),
+            nn.Linear(6400, 4096),
             nn.ReLU())
         self.fc1 = nn.Sequential(
             nn.Dropout(0.5),
@@ -137,10 +133,15 @@ class AlexNet(nn.Module):
 
     def forward(self, x):
         out = self.layer1(x)
+        print("Layer 1 Output Shape:", out.shape)
         out = self.layer2(out)
+        print("Layer 2 Output Shape:", out.shape)
         out = self.layer3(out)
+        print("Layer 3 Output Shape:", out.shape)
         out = self.layer4(out)
+        print("Layer 4 Output Shape:", out.shape)
         out = self.layer5(out)
+        print("Layer 5 Output Shape:", out.shape)
         out = out.reshape(out.size(0), -1)
         out = self.fc(out)
         out = self.fc1(out)
@@ -168,7 +169,7 @@ total_step = len(train_loader)
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):  
         
-    
+        print(images.shape)
     
         # Move tensors to the configured device
         images = images.to(device)
@@ -217,10 +218,3 @@ with torch.no_grad():
         del images, labels, outputs
 
     print('Accuracy of the network on the {} test images: {} %'.format(10000, 100 * correct / total)) 
-
-'''
-TO DO:
-    -Normalisierung
-    -Größe der Bilder?
-    -Labels?
-'''
