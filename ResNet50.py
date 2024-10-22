@@ -4,7 +4,6 @@
 # source: https://moiseevigor.github.io/software/2022/12/18/one-pager-training-resnet-on-imagenet/
 # source: https://pytorch.org/vision/stable/models.html
 ###############################################################################################
-
 # Import packages
 import numpy as np
 import torch
@@ -20,9 +19,10 @@ from torchvision import models
 from sklearn import metrics  # for confusion matrix
 
 # import data set
-dataset_train = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\trainneu'  # Pfad zu den Trainingsdaten
-dataset_val = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\valneu'  # Pfad zu den Validierungsdaten
-dataset_test = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\testneu'  # Pfad zu den Testdaten
+dataset_train = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Mushroom data set\data_output\train'  # Pfad zu den Trainingsdaten
+dataset_val = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Mushroom data set\data_output\val'   # Pfad zu den Validierungsdaten
+dataset_test = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Mushroom data set\data_output\test'  # Pfad zu den Testdaten
+
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -195,8 +195,8 @@ def train_model(model, criterion, optimizer, train_loader, valid_loader, num_epo
                 val_loss += loss.item() * inputs.size(0)
                 val_corrects += torch.sum(preds == labels.data)
 
-        val_loss = val_loss / len(valid_loader.dataset)
-        val_acc = val_corrects.double() / len(valid_loader.dataset)
+                val_loss = val_loss / len(valid_loader.dataset)
+                val_acc = val_corrects.double() / len(valid_loader.dataset)
 
         print(f'Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}')
 
