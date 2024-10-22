@@ -7,6 +7,11 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import DataLoader
 from PIL import Image
 
+# import data set
+dataset_train = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\trainneu'  # Pfad zu den Trainingsdaten
+dataset_val = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\valneu'  # Pfad zu den Validierungsdaten
+dataset_test = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\testneu'  # Pfad zu den Testdaten
+
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -81,15 +86,15 @@ def get_test_loader(data_dir,
 
 #Datensätze laden 
 train_loader, valid_loader = get_train_valid_loader(
-    data_dir_train=r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\dataset_final\trainneu',  # Pfad zu den Trainingsdaten
-    data_dir_valid=r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\dataset_final\valneu',  # Pfad zu den Validierungsdaten
+    data_dir_train= dataset_train, # Pfad zu den Trainingsdaten
+    data_dir_valid= dataset_val, # Pfad zu den Validierungsdaten
     batch_size=64,
     augment=True,  # Augmentierung für Trainingsdaten
     shuffle=True
 )
 
 test_loader = get_test_loader(
-    data_dir=r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\dataset_final\testneu',  # Pfad zu den Testdaten
+    data_dir= dataset_test, # Pfad zu den Testdaten
     batch_size=64
 )
 
