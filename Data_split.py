@@ -7,9 +7,8 @@
 import splitfolders # splitting data into test, val, train
 import os # Ordner splitten
 
-dataset = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Mushroom data set\data'
-output_folder = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Mushroom data set\data_output'
-
+dataset = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset'
+output_folder = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output'
 
 
 # Split data set
