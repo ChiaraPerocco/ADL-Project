@@ -6,11 +6,12 @@ from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import DataLoader
 from PIL import Image
+from sklearn.metrics import precision_recall_fscore_support
 
 # import data set
-dataset_train = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\trainneu'  # Pfad zu den Trainingsdaten
-dataset_val = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\valneu'  # Pfad zu den Validierungsdaten
-dataset_test = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\European License data set\dataset_final\testneu'  # Pfad zu den Testdaten
+dataset_train = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output - Kopie\train'  # Pfad zu den Trainingsdaten
+dataset_val = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output - Kopie\val'  # Pfad zu den Validierungsdaten
+dataset_test = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output - Kopie\test'  # Pfad zu den Testdaten
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -197,6 +198,10 @@ for epoch in range(num_epochs):
     with torch.no_grad():
         correct = 0
         total = 0
+
+        all_val_labels = []
+        all_val_preds = []
+
         for images, labels in valid_loader:
             images = images.to(device)
             labels = labels.to(device)
@@ -204,15 +209,34 @@ for epoch in range(num_epochs):
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+
+            # Speichern der Labels und Vorhersagen für Berechnung
+            all_val_labels.extend(labels.cpu().numpy())
+            all_val_preds.extend(predicted.cpu().numpy())
+            
             del images, labels, outputs
 
-        print('Accuracy of the network on the {} validation images: {} %'.format(5000, 100 * correct / total)) 
+        # Berechnung der Validation Accuracy
+        val_accuracy = 100 * correct / total
+
+        print('Accuracy of the network on the {} validation images: {} %'.format(total, val_accuracy)) 
+
+        # Berechnung von Precision, Recall, F1-Score für Validation
+        val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(all_val_labels, all_val_preds, average='weighted')
         
+        # Ausgabe und Speicherung der Validierungsmetriken
+        print(f'Validation Precision: {val_precision:.4f}')
+        print(f'Validation Recall: {val_recall:.4f}')
+        print(f'Validation F1-Score: {val_f1:.4f}')
 
 #Testing
 with torch.no_grad():
     correct = 0
     total = 0
+
+    all_test_labels = []
+    all_test_preds = []
+
     for images, labels in test_loader:
         images = images.to(device)
         labels = labels.to(device)
@@ -220,6 +244,23 @@ with torch.no_grad():
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
+
+        # Speichern der Labels und Vorhersagen für Berechnung
+        all_test_labels.extend(labels.cpu().numpy())
+        all_test_preds.extend(predicted.cpu().numpy())
+
         del images, labels, outputs
 
-    print('Accuracy of the network on the {} test images: {} %'.format(10000, 100 * correct / total)) 
+            # Berechnung der Test Accuracy
+    test_accuracy = 100 * correct / total
+    print('Accuracy of the network on the {} test images: {} %'.format(total, test_accuracy))
+    
+    # Berechnung von Precision, Recall, F1-Score für Test
+    test_precision, test_recall, test_f1, _ = precision_recall_fscore_support(all_test_labels, all_test_preds, average='weighted')
+    
+    # Ausgabe und Speicherung der Testmetriken
+    print(f'Test Precision: {test_precision:.4f}')
+    print(f'Test Recall: {test_recall:.4f}')
+    print(f'Test F1-Score: {test_f1:.4f}')
+
+
