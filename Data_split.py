@@ -7,8 +7,8 @@
 import splitfolders # splitting data into test, val, train
 import os # Ordner splitten
 
-dataset = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset'
-output_folder = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output'
+dataset = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\facial_emotion_dataset\dataset'
+output_folder = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset'
 
 
 # Split data set
