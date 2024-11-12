@@ -1,8 +1,14 @@
-# Vision Transformer
-# Source: https://medium.com/@brianpulfer/vision-transformers-from-scratch-pytorch-a-step-by-step-guide-96c3313c2e0c
-#         https://huggingface.co/blog/fine-tune-vit
-#         https://colab.research.google.com/drive/1BG_8peLIzpbQxztz2GNSptok0g4QrOiN?usp=sharing#scrollTo=XLKA1dnC4O1d
-
+###################################################################################################################################### 
+#
+# #Vision Transformer
+# source: https://medium.com/@brianpulfer/vision-transformers-from-scratch-pytorch-a-step-by-step-guide-96c3313c2e0c
+# source: https://huggingface.co/blog/fine-tune-vit
+# source: https://colab.research.google.com/drive/1BG_8peLIzpbQxztz2GNSptok0g4QrOiN?usp=sharing#scrollTo=XLKA1dnC4O1d
+# source: https://optuna.org/
+# source: https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
+#
+#####################################################################################################################################
+# import packages
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,6 +23,7 @@ from torchvision import models
 from sklearn import metrics  # for confusion matrix
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import seaborn as sns # Confusion Matrix
+import optuna
 
 # Import data set
 dataset_train = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\train"  # Pfad zu den Trainingsdaten
@@ -26,10 +33,8 @@ dataset_test = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Pro
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Set hyperparameters
-num_epochs = 3
-batch_size = 64
-learning_rate = 0.001
+# Set number of classes in data
+num_classes = 6
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
                            data_dir_valid,
@@ -100,132 +105,229 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-#Datensätze laden 
-train_loader, valid_loader = get_train_valid_loader(
-    data_dir_train= dataset_train, # Pfad zu den Trainingsdaten
-    data_dir_valid= dataset_val, # Pfad zu den Validierungsdaten
-    batch_size=batch_size,
-    augment=True,  # Augmentierung für Trainingsdaten
-    shuffle=True # Daten werden vor jedem Training zufällig durchmischt
-)
-
-test_loader = get_test_loader(
-    data_dir= dataset_test, # Pfad zu den Testdaten
-    batch_size=batch_size
-)
-
-# Lädt das vortrainierte Vision Transformer Modell 
-#    vortrainierte Gewichte
+# Modell und Optimierer initialisieren
 model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
 model = model.to(device)
-num_classes = 6
 model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
 
-# Optimierer und Verlustfunktion definieren
-optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-criterion = torch.nn.CrossEntropyLoss()
+# Optuna-Zielfunktion für Hyperparameter-Optimierung
+def objective(trial):
+    # Hyperparameter anpassen
+    batch_size = trial.suggest_int("batch_size", 32, 128, step=32)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
+    num_epochs = trial.suggest_int("num_epochs", 1, 5)
 
-# Trainings- und Validierungsfunktion
-def train_model(model, criterion, optimizer, train_loader, valid_loader, num_epochs=num_epochs):
+    # Datensätze mit den aktuellen Batch-Größen laden
+    train_loader, valid_loader = get_train_valid_loader(
+        data_dir_train=dataset_train,
+        data_dir_valid=dataset_val,
+        batch_size=batch_size,
+        augment=True,
+        shuffle=True
+    )
+
+    # Modell und Optimierer initialisieren
+    model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+    model = model.to(device)
+    model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
+    
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    criterion = nn.CrossEntropyLoss()
+
+    model.train()
+    # Training und Validierung
     for epoch in range(num_epochs):
-        print(f'Epoch {epoch+1}/{num_epochs}')
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs.logits, labels)
+            loss.backward()
+            optimizer.step()
 
-        # Training
-        model.train() # Setzt das Modell in den Trainingsmodus
+    # Validierung
+    model.eval()
+    val_loss = 0.0
+    val_corrects = 0
+    with torch.no_grad():
+        for inputs, labels in valid_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            _, preds = torch.max(outputs.logits, 1)
+            val_loss += criterion(outputs.logits, labels).item() * inputs.size(0)
+            val_corrects += torch.sum(preds == labels.data)
+                
+        val_loss = val_loss / len(valid_loader.dataset)
+        val_acc = val_corrects.double() / len(valid_loader.dataset)
+        
+        return val_acc
+
+# Starte die Optimierung
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=2)
+
+# Beste Hyperparameter und Wert
+best_params = study.best_params
+print("Best hyperparameters:", best_params)
+print("Best validation accuracy:", study.best_value)
+
+if False:
+    # Testen des Modells mit den besten Hyperparametern
+    best_batch_size = study.best_params['batch_size']
+    best_learning_rate = study.best_params['learning_rate']
+    best_num_epochs = study.best_params['num_epochs']
+
+if False:
+    # Erstelle Modell mit besten Hyperparametern
+    train_loader, valid_loader = get_train_valid_loader(
+        data_dir_train=dataset_train,
+        data_dir_valid=dataset_val,
+        batch_size=best_batch_size,
+        augment=True,
+        shuffle=True
+    )
+    test_loader = get_test_loader(data_dir=dataset_test, batch_size=best_batch_size)
+
+    model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+    model = model.to(device)
+    model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
+
+    optimizer = optim.AdamW(model.parameters(), lr=best_learning_rate)
+    criterion = nn.CrossEntropyLoss()
+
+    # Trainingsfunktion
+    def train_model(model, criterion, optimizer, train_loader, valid_loader, num_epochs=best_num_epochs):
+        for epoch in range(num_epochs):
+            print(f'Epoch {epoch+1}/{num_epochs}')
+
+            model.train()
+            running_loss = 0.0
+            running_corrects = 0
+            for inputs, labels in train_loader:
+                inputs, labels = inputs.to(device), labels.to(device)
+                optimizer.zero_grad()
+                outputs = model(inputs)
+                loss = criterion(outputs.logits, labels)
+                loss.backward()
+                optimizer.step()
+
+                running_loss += loss.item() * inputs.size(0)
+                _, preds = torch.max(outputs.logits, 1)
+                running_corrects += torch.sum(preds == labels.data)
+
+            epoch_loss = running_loss / len(train_loader.dataset)
+            epoch_acc = running_corrects.double() / len(train_loader.dataset)
+
+            print(f'Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+
+        return model
+
+    model = train_model(model, criterion, optimizer, train_loader, valid_loader, num_epochs=best_num_epochs)
+
+    # Testfunktion
+    def test_model(model, test_loader):
+        model.eval()
+        test_corrects = 0
+        all_labels = []
+        all_preds = []
+
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs, labels = inputs.to(device), labels.to(device)
+                outputs = model(inputs)
+                _, preds = torch.max(outputs.logits, 1)
+                test_corrects += torch.sum(preds == labels.data)
+                all_labels.extend(labels.cpu().numpy())
+                all_preds.extend(preds.cpu().numpy())
+
+        test_acc = test_corrects.double() / len(test_loader.dataset)
+        precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
+        print(f'Test Accuracy: {test_acc:.4f}')
+        print(f'Precision: {precision:.4f}')
+        print(f'Recall: {recall:.4f}')
+        print(f'F1-Score: {f1:.4f}')
+        
+        return test_acc.item(), precision, recall, f1, all_labels, all_preds
+
+    # Modell auf Testdaten auswerten
+    test_acc, precision, recall, f1, all_labels, all_preds = test_model(model, test_loader)
+
+# Verwende die besten Hyperparameter zum Trainieren des finalen Modells
+def train_final_model(best_params, dataset_train, dataset_val, device):
+    # Extrahiere die Hyperparameter
+    learning_rate = best_params['learning_rate']
+    batch_size = best_params['batch_size']
+    num_epochs = best_params['num_epochs']
+    
+    # Lade die Trainings- und Validierungsdaten mit dem besten Batch-Size
+    train_loader, valid_loader = get_train_valid_loader(
+        data_dir_train=dataset_train,
+        data_dir_valid=dataset_val,
+        batch_size=batch_size,
+        augment=True,
+        shuffle=True
+    )
+    
+    # Modell und Optimierer initialisieren
+    model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+    model = model.to(device)
+    model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
+    
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    criterion = nn.CrossEntropyLoss()
+    
+    # Trainiere das Modell mit den besten Hyperparametern
+    for epoch in range(num_epochs):
+        model.train()
         running_loss = 0.0
         running_corrects = 0
         for inputs, labels in train_loader:
-            # Move input and label tensors to the device
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            # Gradienten zurücksetzen
             optimizer.zero_grad()
+            outputs = model(inputs)
+            _, preds = torch.max(outputs.logits, 1)
+            loss = criterion(outputs.logits, labels)
+            loss.backward()
+            optimizer.step()
 
-            # Vorwärtsdurchlauf
-            outputs = model(inputs) # Modellvorhersagen für das Eingabebatch
-            _, preds = torch.max(outputs.logits, 1) # Vorhersagen (Klassen mit dem höchsten Score) aus den Ausgaben
-                                             # preds: Enthält die vorhergesagte Klasse für jedes Bild im Batch.
-                                             # torch.max(outputs, 1): Diese Funktion findet den Index der maximalen Logit-Werte (die wahrscheinlichste Klasse) entlang der Dimension 1 (also der Klassen).
-            loss = criterion(outputs.logits, labels) # Berechnung des Verlusts zwischen Vorhersagen und tatsächlichen Labels
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += torch.sum(preds == labels.data)
 
-            # Rückwärtsdurchlauf und Optimierung
-            loss.backward() # Gradientenberechnung durch Backpropagation
-            optimizer.step() # Optimierungsschritt: Aktualisieren der Modellparameter
+        epoch_loss = running_loss / len(train_loader.dataset)
+        epoch_acc = running_corrects.double() / len(train_loader.dataset)
 
-            # Statistiken berechnen
-            running_loss += loss.item() * inputs.size(0) # Akkumulierung des Verlusts für das gesamte Batch
-            running_corrects += torch.sum(preds == labels.data) # Akkumulierung der korrekten Vorhersagen
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
 
-        epoch_loss = running_loss / len(train_loader.dataset)  # Durchschnittlicher Verlust über den gesamten Datensatz
-        epoch_acc = running_corrects.double() / len(train_loader.dataset) # Genauigkeit über den gesamten Datensatz
-
-        print(f'Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
-
-        # Validation
-        model.eval() # Setzt Modell in den Evaluationsmodus
-        val_loss = 0.0
-        val_corrects = 0
-        with torch.no_grad():
-            for inputs, labels in valid_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-
-                outputs = model(inputs)
-                _, preds = torch.max(outputs.logits, 1)
-                loss = criterion(outputs.logits, labels)
-
-                val_loss += loss.item() * inputs.size(0)
-                val_corrects += torch.sum(preds == labels.data)
-
-                val_loss = val_loss / len(valid_loader.dataset)
-                val_acc = val_corrects.double() / len(valid_loader.dataset)
-
-        print(f'Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}')
-
-    return model
-
-# Trainiere das Modell
-num_epochs = num_epochs
-model = train_model(model, criterion, optimizer, train_loader, valid_loader, num_epochs=num_epochs)
-
-# Testen des Modells auf den Testdaten
-def test_model(model, test_loader):
+    # Evaluieren auf den Validierungsdaten
     model.eval()
-    test_corrects = 0
-    all_labels = []
-    all_preds = []
-
+    val_loss = 0.0
+    val_corrects = 0
     with torch.no_grad():
-        for inputs, labels in test_loader:
+        for inputs, labels in valid_loader:
             inputs = inputs.to(device)
             labels = labels.to(device)
 
             outputs = model(inputs)
             _, preds = torch.max(outputs.logits, 1)
-            test_corrects += torch.sum(preds == labels.data)
+            loss = criterion(outputs.logits, labels)
 
+            val_loss += loss.item() * inputs.size(0)
+            val_corrects += torch.sum(preds == labels.data)
 
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
-            all_labels.extend(labels.cpu().numpy())
-            all_preds.extend(preds.cpu().numpy())
-
-
-    test_acc = test_corrects.double() / len(test_loader.dataset)
-    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
-    print(f'Test Accuracy: {test_acc:.4f}')
-    print(f'Precision: {precision:.4f}')
-    print(f'Recall: {recall:.4f}')
-    print(f'F1-Score: {f1:.4f}')
+    val_loss = val_loss / len(valid_loader.dataset)
+    val_acc = val_corrects.double() / len(valid_loader.dataset)
     
-    return test_acc.item(), precision, recall, f1, all_labels, all_preds
+    print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
 
-# Test the model
-test_acc, precision, recall, f1, all_labels, all_preds = test_model(model, test_loader)
+    return model
 
-# Testen auf Testdaten
-test_model(model, test_loader)
+# Trainiere das finale Modell mit den besten Hyperparametern
+final_model = train_final_model(best_params, dataset_train, dataset_val, device)
 
+
+'''
 ###################################################################################################
 #
 # AlexNet
@@ -461,3 +563,4 @@ plt.title('Confusion Matrix AlexNet')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
+'''
