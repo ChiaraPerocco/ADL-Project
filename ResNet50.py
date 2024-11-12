@@ -365,7 +365,7 @@ if False:
     test_loader = get_test_loader(data_dir=dataset_test, batch_size=best_params['batch_size'])
     precision, recall, f1, all_labels, all_preds = test_model(model, test_loader)
 
-
+'''
 ###################################################################################################
 #
 # AlexNet
@@ -604,3 +604,4 @@ plt.title('Confusion Matrix AlexNet')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
+'''
