@@ -1,3 +1,12 @@
+###############################################################################################
+#
+# AlexNet
+# source: https://www.digitalocean.com/community/tutorials/alexnet-pytorch
+# source: https://optuna.org/
+# source: https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
+#
+###############################################################################################
+# import packages
 import numpy as np
 import torch
 import torch.nn as nn
