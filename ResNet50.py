@@ -25,18 +25,13 @@ import seaborn as sns # Confusion Matrix
 import optuna
 
 # Import data set
-dataset_train = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output\train'  # Pfad zu den Trainingsdaten
-dataset_val = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output\val'  # Pfad zu den Validierungsdaten
-dataset_test = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\Facial emotion data set\facial_emotion_dataset\dataset_output\test'  # Pfad zu den Testdaten
+dataset_train = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\train"  # Pfad zu den Trainingsdaten
+dataset_val = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\val"  # Pfad zu den Validierungsdaten
+dataset_test = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\test"  # Pfad zu den Testdaten
 
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# Set hyperparameters
-num_epochs = 3
-batch_size = 128
-learning_rate = 0.001
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
                            data_dir_valid,
@@ -314,12 +309,8 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     return model
 
-# Trainiere das Modell
-num_epochs = num_epochs
-model = train_model(model, criterion, optimizer, train_loader, valid_loader, num_epochs=num_epochs)
-
-# Assuming class_names list is defined as follows
-class_names = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
+# Trainiere das finale Modell mit den besten Hyperparametern
+final_model = train_final_model(best_params, dataset_train, dataset_val, device)
 
 if False:
     # Testing function after training with best hyperparameters
@@ -341,45 +332,275 @@ if False:
             all_labels.extend(labels.cpu().numpy())
             all_preds.extend(preds.cpu().numpy())
 
-    # Convert numerical labels and predictions to class names
-    true_labels = [class_names[i] for i in all_labels_resNet50]
-    predicted_labels = [class_names[i] for i in all_preds_resNet50]
+    test_acc = test_corrects.double() / len(test_loader.dataset)
+    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
 
+    print(f'Test Accuracy: {test_acc:.4f}')
+    print(f'Precision: {precision:.4f}')
+    print(f'Recall: {recall:.4f}')
+    print(f'F1-Score: {f1:.4f}')
+
+    #return test_acc.item(), precision, recall, f1, all_labels, all_preds
+
+    # Load the best hyperparameters and train final model
+    best_params = study.best_params
+    train_loader, valid_loader = get_train_valid_loader(
+        data_dir_train=dataset_train,
+        data_dir_valid=dataset_val,
+        batch_size=best_params['batch_size'],
+        augment=True,
+        shuffle=True
+    )
+
+    # Reinitialize model, criterion, optimizer with best params
+    model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    model = model.to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=best_params['learning_rate'])
+
+    # Train final model with best parameters
+    train_model_with_optuna(model, criterion, optimizer, train_loader, valid_loader, num_epochs=best_params['num_epochs'])
+
+    # Test final model
+    test_loader = get_test_loader(data_dir=dataset_test, batch_size=best_params['batch_size'])
+    precision, recall, f1, all_labels, all_preds = test_model(model, test_loader)
+
+
+###################################################################################################
+#
+# AlexNet
+#
+###################################################################################################
+class AlexNet(nn.Module):
+    def __init__(self, num_classes=10):
+        super(AlexNet, self).__init__()
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=0),
+            nn.BatchNorm2d(96),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 3, stride = 2))
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(96, 256, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 3, stride = 2))
+        self.layer3 = nn.Sequential(
+            nn.Conv2d(256, 384, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(384),
+            nn.ReLU())
+        self.layer4 = nn.Sequential(
+            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(384),
+            nn.ReLU())
+        self.layer5 = nn.Sequential(
+            nn.Conv2d(384, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 3, stride = 2))
+        self.fc = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(6400, 4096),
+            nn.ReLU())
+        self.fc1 = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(4096, 4096),
+            nn.ReLU())
+        self.fc2= nn.Sequential(
+            nn.Linear(4096, num_classes))
+
+    def forward(self, x):
+        out = self.layer1(x)
+        print("Layer 1 Output Shape:", out.shape)
+        out = self.layer2(out)
+        print("Layer 2 Output Shape:", out.shape)
+        out = self.layer3(out)
+        print("Layer 3 Output Shape:", out.shape)
+        out = self.layer4(out)
+        print("Layer 4 Output Shape:", out.shape)
+        out = self.layer5(out)
+        print("Layer 5 Output Shape:", out.shape)
+        out = out.reshape(out.size(0), -1)
+        out = self.fc(out)
+        out = self.fc1(out)
+        out = self.fc2(out)
+        return out
+    
+#setting Hyperparameters
+num_classes = 10
+num_epochs = 20
+batch_size = 64
+learning_rate = 0.005
+
+model = AlexNet(num_classes).to(device)
+
+# Loss and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
+
+# Train the model
+total_step = len(train_loader)
+
+total_step = len(train_loader)
+
+
+for epoch in range(num_epochs):
+    for i, (images, labels) in enumerate(train_loader):  
+        
+        print(images.shape)
+    
+        # Move tensors to the configured device
+        images = images.to(device)
+        labels = labels.to(device)
+
+        print(images.shape)
+        # Forward pass
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+
+        # Backward and optimize
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
+                   .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
+
+    # Validation
+    with torch.no_grad():
+        correct = 0
+        total = 0
+
+        all_val_labels = []
+        all_val_preds = []
+
+        for images, labels in valid_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+            # Speichern der Labels und Vorhersagen für Berechnung
+            all_val_labels.extend(labels.cpu().numpy())
+            all_val_preds.extend(predicted.cpu().numpy())
+            
+            del images, labels, outputs
+
+        # Berechnung der Validation Accuracy
+        val_accuracy = 100 * correct / total
+
+        print('Accuracy of the network on the {} validation images: {} %'.format(total, val_accuracy)) 
+
+        # Berechnung von Precision, Recall, F1-Score für Validation
+        val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(all_val_labels, all_val_preds, average='weighted')
+        
+        # Ausgabe und Speicherung der Validierungsmetriken
+        print(f'Validation Precision: {val_precision:.4f}')
+        print(f'Validation Recall: {val_recall:.4f}')
+        print(f'Validation F1-Score: {val_f1:.4f}')
+
+# Testing
+with torch.no_grad():
+    correct = 0
+    total = 0
+
+    all_test_labels_alexNet = []
+    all_test_preds_alexNet = []
+
+    for images, labels in test_loader:
+        images = images.to(device)
+        labels = labels.to(device)
+        outputs = model(images)
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+        # Speichern der Labels und Vorhersagen für spätere Berechnung
+        all_test_labels_alexNet.extend(labels.cpu().numpy())
+        all_test_preds_alexNet.extend(predicted.cpu().numpy())
+
+        del images, labels, outputs
 
     # Berechnung der Test Accuracy
-    test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
+    test_accuracy_alexNet = correct / total
+    print('Accuracy of the network on the {} test images: {} %'.format(total, test_accuracy_alexNet))
     
-    # Berechnung von Precision, Recall und F1-Score
-    precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
+    # Berechnung von Precision, Recall, F1-Score für den Test
+    test_precision_alexNet, test_recall_alexNet, test_f1_alexNet, _ = precision_recall_fscore_support(all_test_labels_alexNet, all_test_preds_alexNet, average='weighted')
     
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-    print(f'Precision: {precision_resNet50:.4f}')
-    print(f'Recall: {recall_resNet50:.4f}')
-    print(f'F1-Score: {f1_resNet50:.4f}')
-    print(f'Labels Testdaten: {true_labels}')
-    print(f'vorhergesagte Testdaten: {predicted_labels}')
-
-    # Rückgabe der Metriken
-    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50, true_labels, predicted_labels
-
-# Testen auf Testdaten und Speichern der Metriken
-test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50, true_labels, predicted_labels = test_model(model, test_loader)
+    # Ausgabe und Speicherung der Testmetriken
+    print(f'Test Precision AlexNet: {test_precision_alexNet:.4f}')
+    print(f'Test Recall AlexNet: {test_recall_alexNet:.4f}')
+    print(f'Test F1-Score AlexNet: {test_f1_alexNet:.4f}')
 
 
-# Testen auf Testdaten
-test_model(model, test_loader)
 
 
-# Confusion Matrix: ResNet50
+###################################################################################################
+#
+# Evaluation of the models 
+#
+###################################################################################################
+###################################################################################################
+###Comparison of the classification methods in the testing stage
+###################################################################################################
 import matplotlib.pyplot as plt 
 
-conf_matrix_resNet50 = confusion_matrix(true_labels, predicted_labels)
+# set width of bar 
+barWidth = 0.25
+fig = plt.subplots(figsize =(12, 8)) 
+
+# set height of bar 
+AlexNet_bar = [test_f1_alexNet, test_accuracy_alexNet, test_precision_alexNet, test_recall_alexNet] 
+ResNet50_bar = [f1, test_acc, precision, recall] 
+
+
+# Set position of bar on X axis 
+br1 = np.arange(len(AlexNet_bar)) 
+br2 = [x + barWidth for x in br1] 
+
+# Make the plot
+plt.bar(br1, AlexNet_bar, color ='r', width = barWidth, 
+        edgecolor ='grey', label ='AlexNet') 
+plt.bar(br2, ResNet50_bar, color ='g', width = barWidth, 
+        edgecolor ='grey', label ='ResNet50') 
+
+# Adding Xticks 
+plt.xlabel('Comparison of the classification methods in the testing stage', fontweight ='bold', fontsize = 15) 
+plt.ylabel('Accuracy', fontweight ='bold', fontsize = 15) 
+plt.xticks([r + barWidth for r in range(len(AlexNet_bar))], 
+        ['F-Measure', 'Accuracy', 'Precision', 'Recall'])
+
+plt.legend()
+plt.show() 
+plt.clf()  # Löscht die Figur für den nächsten Plot
+
+
+
+###################################################################################################
+###Confusion Matrix
+###################################################################################################
+# Confusion Matrix: ResNet50
+conf_matrix_resNet50 = confusion_matrix(all_labels, all_preds)
 
 # Visualisierung der Confusion Matrix
 plt.figure(figsize=(10, 7))
 sns.heatmap(conf_matrix_resNet50, annot=True, fmt='g', cmap='Blues', cbar=False)
 plt.title('Confusion Matrix ResNet50')
+plt.xlabel('Predicted labels')
+plt.ylabel('True labels')
+plt.show()
+
+plt.clf()  # Löscht die Figur für den nächsten Plot
+
+# Confusion Matrix: AlexNet
+conf_matrix_alexNet = confusion_matrix(all_test_labels_alexNet, all_test_preds_alexNet)
+
+# Visualisierung der Confusion Matrix
+plt.figure(figsize=(10, 7))
+sns.heatmap(conf_matrix_alexNet, annot=True, fmt='g', cmap='Blues', cbar=False)
+plt.title('Confusion Matrix AlexNet')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
