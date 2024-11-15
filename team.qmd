@@ -23,3 +23,11 @@ Tahble @tbl-wps contains all work packages defined for this project.
 ## Timeline 
 
 [Describe who worked on which work package and when]
+
+AlexNet - Together
+ResNet50 - Anna
+VisionTransformer - Chiara
+LLM - Anna
+Data_split - Anna
+Hyperparameter - Chiara
+Webcam - Chiara
