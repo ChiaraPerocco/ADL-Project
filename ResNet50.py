@@ -24,12 +24,22 @@ from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import seaborn as sns # Confusion Matrix
 import optuna
 
+import os
+# Absoluten Pfad des aktuellen Skripts ermitteln
+current_dir = os.path.dirname(__file__)
+print(current_dir)
+
+# Relativen Pfad zum Zielordner setzen
+dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "train")
+dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "val")
+dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "test")
+
 # Import data set
-dataset_train = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\train"  # Pfad zu den Trainingsdaten
-dataset_val = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\val"  # Pfad zu den Validierungsdaten
-dataset_test = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\facial_emotion_dataset\dataset_output - Kopie\test"  # Pfad zu den Testdaten
+#dataset_train = "facial_emotion_dataset/dataset_output - Kopie/train"  # Pfad zu den Trainingsdaten
+#dataset_val = "facial_emotion_dataset/dataset_output - Kopie/val"  # Pfad zu den Validierungsdaten
+#dataset_test = "facial_emotion_dataset/dataset_output - Kopie/test"  # Pfad zu den Testdaten
 
-
+num_classes = 5
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -105,6 +115,7 @@ def get_test_loader(data_dir,
 model = resnet50(weights=ResNet50_Weights.DEFAULT)
 model = model.to(device)
 
+
 if False:
     # Train and validate function
     def train_model_with_optuna(model, criterion, optimizer, train_loader, valid_loader, num_epochs):
@@ -150,11 +161,12 @@ if False:
         return model
 
 # Optuna objective function for hyperparameter tuning
+# https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 5)
+    num_epochs = trial.suggest_int('num_epochs', 1, 10)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -164,12 +176,35 @@ def objective(trial):
         augment=True,
         shuffle=True
     )
+    # DataLoader
+    #train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    #valid_loader = torch.utils.data.DataLoader(dataset_val, batch_size=batch_size, shuffle=False)
+
     
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model = model.to(device)
-    
+
+    # Freeze the layers to speed up the process
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Replace the final fully connected layer (classifier) with your own
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    # Move the final layer to the device (to avoid any device mismatch)
+    model.fc = model.fc.to(device)
+
+    # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Only pass the parameters of the final layer (model.fc) to the optimizer
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)  # You can adjust learning rate
+
+    # Replace the final fully connected layer with your own
+    #model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    
+    #criterion = nn.CrossEntropyLoss()
+    #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     model.train()
     for epoch in range(num_epochs):
@@ -230,8 +265,8 @@ if False:
     study.optimize(objective, n_trials=3)
 
 # Run the Optuna study
-study = optuna.create_study(direction="minimize")
-study.optimize(objective, n_trials=3)
+study = optuna.create_study(direction="maximize") # is it minimize or maximize
+study.optimize(objective, n_trials=50)
 
 # Print the best hyperparameters
 best_params = study.best_params
@@ -254,13 +289,32 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         shuffle=True
     )
     
-    # Initialisiere das Modell
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model = model.to(device)
+
+    # Freeze the layers to speed up the process
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Replace the final fully connected layer (classifier) with your own
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    # Move the final layer to the device (to avoid any device mismatch)
+    model.fc = model.fc.to(device)
+
+    # Define loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+
+    # Only pass the parameters of the final layer (model.fc) to the optimizer
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)  # You can adjust learning rate
+
+    # Initialisiere das Modell
+    #model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    #model = model.to(device)
     
     # Initialisiere den Loss und Optimizer mit dem besten Learning Rate
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    #criterion = nn.CrossEntropyLoss()
+    #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     # Trainiere das Modell mit den besten Hyperparametern
     for epoch in range(num_epochs):
@@ -311,6 +365,63 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
 # Trainiere das finale Modell mit den besten Hyperparametern
 final_model = train_final_model(best_params, dataset_train, dataset_val, device)
+
+# Load test data
+test_loader = get_test_loader(
+    data_dir= dataset_test, # Pfad zu den Testdaten
+    batch_size=best_params['batch_size']
+)
+#test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=best_params['batch_size'], shuffle=False)
+
+# Class name list
+class_names = ["Ahegao","Angry", "Happy", "Neutral", "Sad", "Surprise"]
+# Testen des Modells auf den Testdaten
+def test_model(model, test_loader):
+    model.eval()
+    test_corrects = 0
+    all_labels_resNet50 = []
+    all_preds_resNet50 = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            test_corrects += torch.sum(preds == labels.data)
+
+
+            # Speichern der Labels und Vorhersagen für spätere Auswertungen
+            all_labels_resNet50.extend(labels.cpu().numpy())
+            all_preds_resNet50.extend(preds.cpu().numpy())
+
+    # Convert numerical labels and predictions to class names
+    #true_labels = [class_names[i] for i in all_labels_resNet50]
+    #predicted_labels = [class_names[i] for i in all_preds_resNet50]
+
+    # Berechnung der Test Accuracy
+    test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
+    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
+
+    # Berechnung von Precision, Recall und F1-Score
+    precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
+    
+    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
+    print(f'Precision: {precision_resNet50:.4f}')
+    print(f'Recall: {recall_resNet50:.4f}')
+    print(f'F1-Score: {f1_resNet50:.4f}')
+    
+    print(f'Labels Testdaten: {all_labels_resNet50}')
+    print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
+    # Rückgabe der Metriken
+    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50, all_labels_resNet50, all_preds_resNet50
+
+# Testen auf Testdaten und Speichern der Metriken und label
+test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
+
+# Testen auf Testdaten
+# test_model(final_model, test_loader)
 
 if False:
     # Testing function after training with best hyperparameters
