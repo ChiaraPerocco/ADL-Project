@@ -31,3 +31,4 @@ LLM - Anna
 Data_split - Anna
 Hyperparameter - Chiara
 Webcam - Chiara
+image caption - chiara
