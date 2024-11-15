@@ -20,7 +20,7 @@ if True:
     image = pipe(prompt).images[0]
 
     # Save the image to a folder
-    image_path = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\Output images\generated_image.png'  # Change the path as needed
+    image_path = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\Output_images\generated_image.png'  # Change the path as needed
     image.save(image_path)
 
     print(f"Image saved at {image_path}")
@@ -43,6 +43,34 @@ if False:
     #image.save(image_path)
 
     #print(f"Image saved at {image_path}")
+    
+###################################################################################################
+#
+# Image caption generation
+#
+# Hugging face
+# source: https://huggingface.co/Salesforce/blip-image-captioning-base
+#
+###################################################################################################
+from transformers import BlipProcessor, BlipForConditionalGeneration
+from PIL import Image
+
+# Bildunterschrift mit BLIP generieren
+def generate_image_caption(image_path):
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+
+    # Bild laden
+    image = Image.open(image_path)
+    
+    # Bildunterschrift generieren
+    inputs = processor(image, return_tensors="pt")
+    outputs = model.generate(**inputs, max_length=50)
+    caption = processor.decode(outputs[0], skip_special_tokens=True)
+    return caption
+
+caption = generate_image_caption(image_path)
+print("Generated Caption:", caption)
 
 
 ###################################################################################################
@@ -92,6 +120,8 @@ if False:
         #print(response)
 
 ###################################################################################################
+#
+# Text generation
 #
 # Hugging face, Large chain
 # https://python.langchain.com/v0.2/docs/integrations/tools/ddg/
@@ -145,7 +175,8 @@ def draw_wrapped_text(c, text, x, y, max_chars, font_name="Helvetica", font_size
     # Return new Y position after drawing the text
     return y - len(wrapped_lines) * leading
 
-def create_article_pdf(question, image_path, output_pdf_path):
+# Artikel-PDF mit Bild und Bildunterschrift erstellen
+def create_article_pdf(question, image_path, caption, output_pdf_path):
     # Define sections and aspects
     sections = [
         ("Introduction", "Provide a general overview of the topic"),
@@ -153,19 +184,20 @@ def create_article_pdf(question, image_path, output_pdf_path):
         ("Detailed Analysis", "Give an in-depth exploration of specific details"),
         ("Conclusion", "Summarize the findings and discuss implications")
     ]
-
+    
+    
     # Generate content for each section
     section_texts = {}
     for section_title, aspect in sections:
         section_texts[section_title] = generate_answer_for_section(question, aspect)
-    
+
     # Initialize ReportLab canvas
     c = canvas.Canvas(output_pdf_path, pagesize=A4)
     width, height = A4
     margin = 50
     max_chars = 90  # Approximate char width for wrapping
     current_y = height - margin  # Start from the top margin
-    
+
     def check_page_break(c, current_y, section_height):
         if current_y - section_height < margin:
             c.showPage()
@@ -177,15 +209,11 @@ def create_article_pdf(question, image_path, output_pdf_path):
     c.drawString(margin, current_y, "Generated Article: " + question)
     current_y -= 30
 
-    # Draw each section
-    for section_title, _ in sections:
-        current_y = check_page_break(c, current_y, 80)
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(margin, current_y, section_title + ":")
-        current_y -= 20
-        section_content = section_texts[section_title]
-        current_y = draw_wrapped_text(c, section_content, margin, current_y, max_chars)
-        current_y -= 30  # Add space after each section
+    # Caption
+    current_y = check_page_break(c, current_y, 40)
+    c.setFont("Helvetica", 12)
+    c.drawString(margin, current_y, "Image Caption: " + caption)
+    current_y -= 30
 
     # Add Image
     if os.path.exists(image_path):
@@ -203,28 +231,26 @@ def create_article_pdf(question, image_path, output_pdf_path):
             current_y = height - margin
 
         c.drawImage(image_path, margin, current_y - img_height, width=img_width, height=img_height)
+        current_y -= img_height + 20
     else:
         print(f"Image file not found at {image_path}")
+        
+     # Draw each section
+    for section_title, _ in sections:
+        current_y = check_page_break(c, current_y, 80)
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(margin, current_y, section_title + ":")
+        current_y -= 20
+        section_content = section_texts[section_title]
+        current_y = draw_wrapped_text(c, section_content, margin, current_y, max_chars)
+        current_y -= 30  # Add space after each section
 
     # Save the PDF
     c.showPage()
     c.save()
     print(f"Article PDF created at: {output_pdf_path}")
 
-
 # Main usage
 question = "What is the neuroscience behind sadness?"
-#answer = generate_answer_for_section(question)
-#search_results = search.invoke(question)  # Context from DuckDuckGo search
-
-
-# Specify the image path
-image_path = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\Output images\generated_image.png'
-
-# Generate the article PDF with image
-pdf_path = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\Output images\sad_text.pdf'
-output_pdf_path = pdf_path
-#create_article_pdf(question, answer, search_results, image_path, output_pdf_path)
-create_article_pdf(question, image_path, output_pdf_path=pdf_path)
-
-
+pdf_path = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\Output_images\sad_text.pdf'
+create_article_pdf(question, image_path, caption, pdf_path)
