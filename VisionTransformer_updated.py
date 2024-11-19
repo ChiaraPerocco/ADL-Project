@@ -2,6 +2,7 @@
 #
 # #Vision Transformer
 # source: https://medium.com/@brianpulfer/vision-transformers-from-scratch-pytorch-a-step-by-step-guide-96c3313c2e0c
+# source: 
 # source: https://huggingface.co/blog/fine-tune-vit
 # source: https://colab.research.google.com/drive/1BG_8peLIzpbQxztz2GNSptok0g4QrOiN?usp=sharing#scrollTo=XLKA1dnC4O1d
 # source: https://optuna.org/
@@ -108,7 +109,7 @@ def get_test_loader(data_dir,
 # Modell und Optimierer initialisieren
 model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
 model = model.to(device)
-model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
+model.classifier = nn.Linear(model.classifier.in_features, num_classes)
 
 # Optuna-Zielfunktion für Hyperparameter-Optimierung
 def objective(trial):
@@ -129,7 +130,7 @@ def objective(trial):
     # Modell und Optimierer initialisieren
     model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
     model = model.to(device)
-    model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
+    model.classifier = nn.Linear(model.classifier.in_features, num_classes)
     
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
@@ -271,8 +272,13 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Modell und Optimierer initialisieren
     model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
     model = model.to(device)
-    model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
     
+    # Freeze the layers to speed up the process
+    for param in model.parameters():
+        param.requires_grad = False
+    
+    model.classifier = nn.Linear(model.classifier.in_features, num_classes)
+        
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
     
