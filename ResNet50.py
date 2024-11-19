@@ -184,13 +184,27 @@ def objective(trial):
     #train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     #valid_loader = torch.utils.data.DataLoader(dataset_val, batch_size=batch_size, shuffle=False)
 
-    
+    # Load pretrained model
+    # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    model = model.to(device)
-    model.classifier = torch.nn.Linear(model.classfier.in_features, num_classes)
 
+    # Freeze all layers
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Unfreeze last layer
+    for param in model.fc.parameters():
+        param.requires_grad = True
+
+    # Replace last layer (final fully connected layer (classifier))
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+
+    # Move the final fully connected layer to the device
+    model = model.to(device)
+
+    # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
     
     model.train()
     for epoch in range(num_epochs):
@@ -275,12 +289,27 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         shuffle=True
     )
     
+    # Load pretrained model
+    # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    model = model.to(device)
-    model.classifier = torch.nn.Linear(model.classfier.in_features, num_classes)
 
+    # Freeze all layers
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Unfreeze last layer
+    for param in model.fc.parameters():
+        param.requires_grad = True
+
+    # Replace last layer (final fully connected layer (classifier))
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+
+    # Move the final fully connected layer to the device
+    model = model.to(device)
+
+    # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
     
     # Trainiere das Modell mit den besten Hyperparametern
     for epoch in range(num_epochs):
