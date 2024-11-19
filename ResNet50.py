@@ -115,8 +115,9 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-model = resnet50(weights=ResNet50_Weights.DEFAULT)
-model = model.to(device)
+#model = resnet50(weights=ResNet50_Weights.DEFAULT)
+#model = model.to(device)
+
 
 
 if False:
@@ -186,10 +187,8 @@ def objective(trial):
     
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model = model.to(device)
+    model.classifier = torch.nn.Linear(model.classfier.in_features, num_classes)
 
-    # Replace the final fully connected layer with your own
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
-    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
@@ -276,11 +275,10 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         shuffle=True
     )
     
-    # Initialisiere das Modell
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model = model.to(device)
-    
-    # Initialisiere den Loss und Optimizer mit dem besten Learning Rate
+    model.classifier = torch.nn.Linear(model.classfier.in_features, num_classes)
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
