@@ -23,6 +23,9 @@ from sklearn import metrics  # for confusion matrix
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import seaborn as sns # Confusion Matrix
 import optuna
+from torchcam.methods import SmoothGradCAMpp
+from torchcam.utils import overlay_mask
+import matplotlib.pyplot as plt
 
 import os
 # Absoluten Pfad des aktuellen Skripts ermitteln
@@ -112,8 +115,9 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-model = resnet50(weights=ResNet50_Weights.DEFAULT)
-model = model.to(device)
+#model = resnet50(weights=ResNet50_Weights.DEFAULT)
+#model = model.to(device)
+
 
 
 if False:
@@ -166,7 +170,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 10)
+    num_epochs = trial.suggest_int('num_epochs', 1, 1)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -180,31 +184,27 @@ def objective(trial):
     #train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     #valid_loader = torch.utils.data.DataLoader(dataset_val, batch_size=batch_size, shuffle=False)
 
-    
+    # Load pretrained model
+    # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    model = model.to(device)
 
-    # Freeze the layers to speed up the process
+    # Freeze all layers
     for param in model.parameters():
         param.requires_grad = False
 
-    # Replace the final fully connected layer (classifier) with your own
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    # Unfreeze last layer
+    for param in model.fc.parameters():
+        param.requires_grad = True
 
-    # Move the final layer to the device (to avoid any device mismatch)
-    model.fc = model.fc.to(device)
+    # Replace last layer (final fully connected layer (classifier))
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
 
-    # Define loss function and optimizer
+    # Move the final fully connected layer to the device
+    model = model.to(device)
+
+    # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-
-    # Only pass the parameters of the final layer (model.fc) to the optimizer
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)  # You can adjust learning rate
-
-    # Replace the final fully connected layer with your own
-    #model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
-    
-    #criterion = nn.CrossEntropyLoss()
-    #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
     
     model.train()
     for epoch in range(num_epochs):
@@ -266,7 +266,7 @@ if False:
 
 # Run the Optuna study
 study = optuna.create_study(direction="maximize") # is it minimize or maximize
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=1)
 
 # Print the best hyperparameters
 best_params = study.best_params
@@ -289,32 +289,27 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         shuffle=True
     )
     
+    # Load pretrained model
+    # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    model = model.to(device)
 
-    # Freeze the layers to speed up the process
+    # Freeze all layers
     for param in model.parameters():
         param.requires_grad = False
 
-    # Replace the final fully connected layer (classifier) with your own
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    # Unfreeze last layer
+    for param in model.fc.parameters():
+        param.requires_grad = True
 
-    # Move the final layer to the device (to avoid any device mismatch)
-    model.fc = model.fc.to(device)
+    # Replace last layer (final fully connected layer (classifier))
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
 
-    # Define loss function and optimizer
+    # Move the final fully connected layer to the device
+    model = model.to(device)
+
+    # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-
-    # Only pass the parameters of the final layer (model.fc) to the optimizer
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)  # You can adjust learning rate
-
-    # Initialisiere das Modell
-    #model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    #model = model.to(device)
-    
-    # Initialisiere den Loss und Optimizer mit dem besten Learning Rate
-    #criterion = nn.CrossEntropyLoss()
-    #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
     
     # Trainiere das Modell mit den besten Hyperparametern
     for epoch in range(num_epochs):
@@ -374,7 +369,7 @@ test_loader = get_test_loader(
 #test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=best_params['batch_size'], shuffle=False)
 
 # Class name list
-class_names = ["Ahegao","Angry", "Happy", "Neutral", "Sad", "Surprise"]
+class_names = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
 # Testen des Modells auf den Testdaten
 def test_model(model, test_loader):
     model.eval()
@@ -415,10 +410,10 @@ def test_model(model, test_loader):
     print(f'Labels Testdaten: {all_labels_resNet50}')
     print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
     # Rückgabe der Metriken
-    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50, all_labels_resNet50, all_preds_resNet50
+    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50
 
 # Testen auf Testdaten und Speichern der Metriken und label
-test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
+test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Testen auf Testdaten
 # test_model(final_model, test_loader)
@@ -475,6 +470,235 @@ if False:
     # Test final model
     test_loader = get_test_loader(data_dir=dataset_test, batch_size=best_params['batch_size'])
     precision, recall, f1, all_labels, all_preds = test_model(model, test_loader)
+
+###################################################################################################
+#
+# Saliency Maps with Grad-CAM
+# https://github.com/idiap/fullgrad-saliency/blob/26fb91b2f9ef616d15d080644b9f8a656a68204f/dump_images.py
+#
+###################################################################################################
+#
+# Copyright (c) 2019 Idiap Research Institute, http://www.idiap.ch/
+# Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
+#
+
+""" 
+    Implement GradCAM
+
+    Original Paper: 
+    Selvaraju, Ramprasaath R., et al. "Grad-cam: Visual explanations from deep networks 
+    via gradient-based localization." ICCV 2017.
+
+"""
+
+import torch.nn.functional as F
+from math import isclose
+
+class GradCAMExtractor:
+    #Extract tensors needed for Gradcam using hooks
+    
+    def __init__(self, model):
+        self.model = model
+
+        self.features = None
+        self.feat_grad = None
+
+        prev_module = None
+        self.target_module = None
+
+        # Iterate through layers
+        for m in self.model.modules():
+            if isinstance(m, nn.Conv2d):
+                prev_module = m
+            elif isinstance(m, nn.Linear):
+                self.target_module = prev_module
+                break
+
+        if self.target_module is not None:
+            # Register feature-gradient and feature hooks for each layer
+            handle_g = self.target_module.register_backward_hook(self._extract_layer_grads)
+            handle_f = self.target_module.register_forward_hook(self._extract_layer_features)
+
+    def _extract_layer_grads(self, module, in_grad, out_grad):
+        # function to collect the gradient outputs
+        self.feature_grads = out_grad[0]
+    
+    def _extract_layer_features(self, module, input, output):
+        # function to collect the layer outputs
+        self.features = output
+
+    def getFeaturesAndGrads(self, x, target_class):
+
+        out = self.model(x)
+
+        if target_class is None:
+            target_class = out.data.max(1, keepdim=True)[1]
+
+        output_scalar = -1. * F.nll_loss(out, target_class.flatten(), reduction='sum')
+
+        # Compute gradients
+        self.model.zero_grad()
+        output_scalar.backward()
+
+        return self.features, self.feature_grads
+
+
+class GradCAM():
+    """
+    Compute GradCAM 
+    """
+
+    def __init__(self, model):
+        self.model = model
+        self.model_ext = GradCAMExtractor(self.model)
+
+
+    def saliency(self, image, target_class=None):
+        #Simple FullGrad saliency
+        
+        self.model.eval()
+        features, intermed_grad = self.model_ext.getFeaturesAndGrads(image, target_class=target_class)
+
+        # GradCAM computation
+        grads = intermed_grad.mean(dim=(2,3), keepdim=True)
+        cam = (F.relu(features)* grads).sum(1, keepdim=True)
+        cam_resized = F.interpolate(F.relu(cam), size=image.size(2), mode='bilinear', align_corners=True)
+        return cam_resized
+
+
+######### misc function.py
+#
+# Copyright (c) 2019 Idiap Research Institute, http://www.idiap.ch/
+# Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
+#
+
+""" Misc helper functions """
+
+import cv2
+import subprocess
+import torchvision.transforms as transforms
+
+class NormalizeInverse(transforms.Normalize):
+    # Undo normalization on images
+
+    def __init__(self, mean, std):
+        mean = torch.as_tensor(mean)
+        std = torch.as_tensor(std)
+        std_inv = 1 / (std + 1e-7)
+        mean_inv = -mean * std_inv
+        super(NormalizeInverse, self).__init__(mean=mean_inv, std=std_inv)
+
+    def __call__(self, tensor):
+        return super(NormalizeInverse, self).__call__(tensor.clone())
+
+
+def create_folder(folder_name):
+    try:
+        subprocess.call(['mkdir','-p',folder_name])
+    except OSError:
+        None
+
+def save_saliency_map(image, saliency_map, filename):
+    """ 
+    Save saliency map on image.
+    
+    Args:
+        image: Tensor of size (3,H,W)
+        saliency_map: Tensor of size (1,H,W) 
+        filename: string with complete path and file extension
+
+    """
+
+    image = image.data.cpu().numpy()
+    saliency_map = saliency_map.data.cpu().numpy()
+
+    saliency_map = saliency_map - saliency_map.min()
+    saliency_map = saliency_map / saliency_map.max()
+    saliency_map = saliency_map.clip(0,1)
+
+    saliency_map = np.uint8(saliency_map * 255).transpose(1, 2, 0)
+    saliency_map = cv2.resize(saliency_map, (224,224))
+
+    image = np.uint8(image * 255).transpose(1,2,0)
+    image = cv2.resize(image, (224, 224))
+
+    # Apply JET colormap
+    color_heatmap = cv2.applyColorMap(saliency_map, cv2.COLORMAP_JET)
+    
+    # Combine image with heatmap
+    img_with_heatmap = np.float32(color_heatmap) + np.float32(image)
+    img_with_heatmap = img_with_heatmap / np.max(img_with_heatmap)
+
+    cv2.imwrite(filename, np.uint8(255 * img_with_heatmap))
+
+#########dump images .py
+#
+# Copyright (c) 2019 Idiap Research Institute, http://www.idiap.ch/
+# Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
+#
+
+""" Compute saliency maps of images from dataset folder
+    and dump them in a results folder """
+
+from torchvision import datasets, utils, models
+
+
+# PATH variables
+PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
+dataset = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "test")
+
+unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
+                           std = [0.229, 0.224, 0.225])
+
+def compute_saliency_and_save():
+    for batch_idx, (data, _) in enumerate(test_loader):
+        data = data.to(device).requires_grad_()
+
+        # Compute saliency maps for the input data
+        saliency_map = GradCAM(final_model).saliency(data)
+
+        # Save saliency maps
+        for i in range(data.size(0)):
+            filename = save_path + str( (batch_idx+1) * (i+1))
+            image = unnormalize(data[i].cpu())
+            save_saliency_map(image, saliency_map[i], filename + '_' + '.jpg')
+
+
+#if __name__ == "__main__":
+# Create folder to saliency maps
+#save_path = PATH + 'results/'
+save_path = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\Output images\results'
+create_folder(save_path)
+compute_saliency_and_save()
+print('Saliency maps saved.')
+
+######################################################################################################
+if False: 
+    x = 1
+    # get the input image index
+    #from tf_keras_vis.utils.score import CategoricalScore
+    #score = CategoricalScore([281, 235, 8, 292]) # value for each class???? 
+
+
+    # Create GradCAM object 
+    #gradcam = Gradcam(final_model, clone = True)
+
+    # Generate heatmap with Grad CAM
+    #cam = gradcam(score, input_images, penultimate_layer = -1)
+
+    # show generated images
+
+
+    #from tf_keras_vis.saliency import Saliency
+    #from tf_keras.vis.utils import normalize
+
+    # Create saliency object 
+    #saliency = Saliency(final_model, clone = False)
+
+    # Generate saliency map
+    #saliency_map = saliency(score, input_images)
+    #saliency_map = normalize(saliency_map)
+
 
 '''
 ###################################################################################################
