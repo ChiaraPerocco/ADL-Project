@@ -23,8 +23,8 @@ from sklearn import metrics  # for confusion matrix
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import seaborn as sns # Confusion Matrix
 import optuna
-from torchcam.methods import SmoothGradCAMpp
-from torchcam.utils import overlay_mask
+#from torchcam.methods import SmoothGradCAMpp
+#from torchcam.utils import overlay_mask
 import matplotlib.pyplot as plt
 
 import os
@@ -196,7 +196,7 @@ def objective(trial):
     for param in model.fc.parameters():
         param.requires_grad = True
 
-    # Replace last layer (final fully connected layer (classifier))
+    # Replace last layer (final fully connected layer (classifier)
     model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
 
     # Move the final fully connected layer to the device
@@ -667,7 +667,7 @@ def compute_saliency_and_save():
 #if __name__ == "__main__":
 # Create folder to saliency maps
 #save_path = PATH + 'results/'
-save_path = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\Output images\results'
+save_path = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\Output_images\results"
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
