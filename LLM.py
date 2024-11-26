@@ -139,7 +139,7 @@ from textwrap import wrap
 from transformers import pipeline
 from langchain_community.tools import DuckDuckGoSearchRun
 
-    # Initialize DuckDuckGo search tool
+# Initialize DuckDuckGo search tool
 search = DuckDuckGoSearchRun()
 
 # Load Hugging Face model for text generation
