@@ -1,8 +1,8 @@
 ###############################################################################################
 #
-# Resnet-50
-# source: https://moiseevigor.github.io/software/2022/12/18/one-pager-training-resnet-on-imagenet/
-# source: https://pytorch.org/vision/stable/models.html
+# VisionTransformer
+# source: https://pytorch.org/vision/main/models/generated/torchvision.models.vit_b_16.html
+# source: https://medium.com/@brianpulfer/vision-transformers-from-scratch-pytorch-a-step-by-step-guide-96c3313c2e0c
 # source: https://optuna.org/
 # source: https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 #
@@ -16,7 +16,7 @@ from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import DataLoader
 from PIL import Image
-from torchvision.models import resnet50, ResNet50_Weights
+from torchvision.models import vit_b_16, ViT_B_16_Weights
 import torch.optim as optim
 from torchvision import models
 from sklearn import metrics  # for confusion matrix
@@ -115,10 +115,6 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-#model = resnet50(weights=ResNet50_Weights.DEFAULT)
-#model = model.to(device)
-
-
 
 if False:
     # Train and validate function
@@ -186,25 +182,27 @@ def objective(trial):
 
     # Load pretrained model
     # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
-    model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    model = vit_b_16(weights=ViT_B_16_Weights.DEFAULT)
 
     # Freeze all layers
     for param in model.parameters():
         param.requires_grad = False
-
+    
+    # Replace last layer (final fully connected layer (classifier))
+    #model.heads.head = torch.nn.Linear(model.heads.head.in_features, num_classes)
+    
     # Unfreeze last layer
-    for param in model.fc.parameters():
+    for param in model.heads.head.parameters():
         param.requires_grad = True
-
-    # Replace last layer (final fully connected layer (classifier)
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+        
+    model.heads.head = torch.nn.Linear(model.heads.head.in_features, num_classes)
 
     # Move the final fully connected layer to the device
     model = model.to(device)
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate)
     
     model.train()
     for epoch in range(num_epochs):
@@ -291,25 +289,27 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     
     # Load pretrained model
     # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
-    model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    model = vit_b_16(weights=ViT_B_16_Weights.DEFAULT)
 
     # Freeze all layers
     for param in model.parameters():
         param.requires_grad = False
-
+    
+    # Replace last layer
+    #model.heads.head = torch.nn.Linear(model.heads.head.in_features, num_classes)
+    
     # Unfreeze last layer
-    for param in model.fc.parameters():
+    for param in model.heads.head.parameters():
         param.requires_grad = True
 
-    # Replace last layer (final fully connected layer (classifier))
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    model.heads.head = torch.nn.Linear(model.heads.head.in_features, num_classes)
 
-    # Move the final fully connected layer to the device
+    # Move the final layer to the device
     model = model.to(device)
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate)
     
     # Trainiere das Modell mit den besten Hyperparametern
     for epoch in range(num_epochs):
@@ -374,8 +374,8 @@ class_names = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
 def test_model(model, test_loader):
     model.eval()
     test_corrects = 0
-    all_labels_resNet50 = []
-    all_preds_resNet50 = []
+    all_labels_ViT = []
+    all_preds_ViT = []
 
     with torch.no_grad():
         for inputs, labels in test_loader:
@@ -388,32 +388,28 @@ def test_model(model, test_loader):
 
 
             # Speichern der Labels und Vorhersagen für spätere Auswertungen
-            all_labels_resNet50.extend(labels.cpu().numpy())
-            all_preds_resNet50.extend(preds.cpu().numpy())
-
-    # Convert numerical labels and predictions to class names
-    #true_labels = [class_names[i] for i in all_labels_resNet50]
-    #predicted_labels = [class_names[i] for i in all_preds_resNet50]
+            all_labels_ViT.extend(labels.cpu().numpy())
+            all_preds_ViT.extend(preds.cpu().numpy())
 
     # Berechnung der Test Accuracy
-    test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
+    test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
+    print(f'Test Accuracy: {test_acc_ViT:.4f}')
 
     # Berechnung von Precision, Recall und F1-Score
-    precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
+    precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
     
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-    print(f'Precision: {precision_resNet50:.4f}')
-    print(f'Recall: {recall_resNet50:.4f}')
-    print(f'F1-Score: {f1_resNet50:.4f}')
+    print(f'Test Accuracy: {test_acc_ViT:.4f}')
+    print(f'Precision: {precision_ViT:.4f}')
+    print(f'Recall: {recall_ViT:.4f}')
+    print(f'F1-Score: {f1_ViT:.4f}')
     
-    print(f'Labels Testdaten: {all_labels_resNet50}')
-    print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
+    print(f'Labels Testdaten: {all_labels_ViT}')
+    print(f'vorhergesagte Testdaten: {all_preds_ViT}')
     # Rückgabe der Metriken
-    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50
+    return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
 
 # Testen auf Testdaten und Speichern der Metriken und label
-test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
+test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(final_model, test_loader)
 
 # Testen auf Testdaten
 # test_model(final_model, test_loader)
