@@ -33,14 +33,9 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # Relativen Pfad zum Zielordner setzen
-dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "train")
-dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "val")
-dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "test")
-
-# Import data set
-#dataset_train = "facial_emotion_dataset/dataset_output - Kopie/train"  # Pfad zu den Trainingsdaten
-#dataset_val = "facial_emotion_dataset/dataset_output - Kopie/val"  # Pfad zu den Validierungsdaten
-#dataset_test = "facial_emotion_dataset/dataset_output - Kopie/test"  # Pfad zu den Testdaten
+dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "train")
+dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
+dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
 
 num_classes = 5
 # Device configuration
@@ -166,7 +161,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 1)
+    num_epochs = trial.suggest_int('num_epochs', 1, 50)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
