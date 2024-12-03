@@ -39,7 +39,8 @@ dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
 
 num_classes = 5
 # Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
+print(device)
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
                            data_dir_valid,
@@ -154,21 +155,21 @@ def objective(trial):
     
     model.train()
     for epoch in range(num_epochs):
-            running_loss = 0.0
-            running_corrects = 0
-            for inputs, labels in train_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+        running_loss = 0.0
+        running_corrects = 0
+        for inputs, labels in train_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
-
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss / len(train_loader.dataset)
             epoch_acc = running_corrects.double() / len(train_loader.dataset)
@@ -195,7 +196,7 @@ def objective(trial):
 
 # Run the Optuna study
 study = optuna.create_study(direction="maximize") # is it minimize or maximize
-study.optimize(objective, n_trials=1)
+study.optimize(objective, n_trials=20)
 
 # Print the best hyperparameters
 best_params = study.best_params
