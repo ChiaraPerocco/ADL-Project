@@ -146,21 +146,21 @@ def objective(trial):
     
     model.train()
     for epoch in range(num_epochs):
-            running_loss = 0.0
-            running_corrects = 0
-            for inputs, labels in train_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+        running_loss = 0.0
+        running_corrects = 0
+        for inputs, labels in train_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss / len(train_loader.dataset)
             epoch_acc = running_corrects.double() / len(train_loader.dataset)

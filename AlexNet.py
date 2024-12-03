@@ -322,7 +322,7 @@ def objective(trial):
 
 # Run the Optuna study
 study = optuna.create_study(direction="maximize") # is it minimize or maximize
-study.optimize(objective, n_trials=1)
+study.optimize(objective, n_trials=20)
 
 # Print the best hyperparameters
 best_params = study.best_params
