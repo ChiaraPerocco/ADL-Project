@@ -5,12 +5,16 @@
 import cv2
 import os
 
+current_dir = os.path.dirname(__file__)
+print(current_dir)
+
+# relative path of taken images
+# Set the directory path where the captured images will be saved
+dir_path = os.path.join(current_dir, "webcam_images")
+
 # Define a function that captures and saves an image from the webcam when a specific key is pressed
-def save_frame_camera_key(basename, ext='jpg', delay=1):
-    
-    # Set the directory path where the captured images will be saved
-    dir_path = output_file = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\testwebcam"
-    
+def save_frame_camera_key(basename, dir_path, ext='jpg', delay=1):
+
     # Initialize the connection to the webcam (camera index 0 for the default webcam)
     video_capture = cv2.VideoCapture(0)
 
