@@ -26,7 +26,7 @@ dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "train")
 dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
 dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
 # Device-Konfiguration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
 
 # Number of classes
 num_classes = 5

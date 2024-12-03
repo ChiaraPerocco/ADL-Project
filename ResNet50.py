@@ -33,7 +33,7 @@ dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
 num_classes = 5
 
 # Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
                            data_dir_valid,
