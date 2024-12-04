@@ -22,16 +22,14 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "Sign Language", "train")
-dataset_val = os.path.join(current_dir, "Sign Language", "val")
-dataset_test = os.path.join(current_dir, "Sign Language", "test")
+dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "train")
+dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
+dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
+# Device-Konfiguration
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-# Number of classes in data set
+# Number of classes
 num_classes = 5
-
-# Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
     normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
