@@ -5,6 +5,7 @@
 # source: https://stackoverflow.com/questions/53074712/how-to-split-folder-of-images-into-test-training-validation-sets-with-stratified
 # source: https://note.nkmk.me/en/python-random-choice-sample-choices/#random-sample-without-replacement-randomsample
 # source: https://www.geeksforgeeks.org/python-shutil-copy-method/
+# source: https://www.kaggle.com/datasets/debashishsau/aslamerican-sign-language-aplhabet-dataset
 #
 ###############################################################################################
 
@@ -36,11 +37,11 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # Pfade definieren
-dataset = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\facial_emotion_dataset\dataset'
-output_folder = os.path.join(current_dir, "facial_emotion_dataset")
+dataset = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\datasetSL\ASL_Alphabet_Dataset\asl_alphabet_train"
+output_folder = os.path.join(current_dir, "Sign Language")
 
 # Anzahl der Bilder pro Klasse
-num_images_per_class = 500
+num_images_per_class = 300
 
 # Temporärer Ordner für reduzierte Datenmenge
 temp_dataset = os.path.join(output_folder, 'temp_dataset')
