@@ -32,8 +32,9 @@ print(current_dir)
 dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
 # Load the models
-resnet50_model = torch.load('resnet50_model.pth')
+#resnet50_model = torch.load('resnet50_model.pth')
 #alexnet_model = torch.load('alexnet_model.pth')
+ViT_model = torch.load('ViT_model.pth')
 
 ###################################################################################################
 #
@@ -41,80 +42,81 @@ resnet50_model = torch.load('resnet50_model.pth')
 #
 ###################################################################################################
 # get test loader
-def get_test_loader(data_dir,
-                    batch_size,
-                    shuffle=True):
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225],
+if False:
+    def get_test_loader(data_dir,
+                        batch_size,
+                        shuffle=True):
+        normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        )
+
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),   #Bildgröße anpassen
+            transforms.ToTensor(),
+            normalize,
+        ])
+        
+
+        # Lade den Testdatensatz
+        test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+
+        # Erstellen des DataLoaders für Testdaten
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+
+        return test_loader
+
+    # Load test data
+    test_loader = get_test_loader(
+        data_dir= dataset_test, # Pfad zu den Testdaten
+        batch_size=64
     )
 
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),   #Bildgröße anpassen
-        transforms.ToTensor(),
-        normalize,
-    ])
-    
 
-    # Lade den Testdatensatz
-    test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+    # Test the model on the test data
+    def test_model(model, test_loader):
+        model.eval()
+        test_corrects = 0
+        all_labels_resNet50 = []
+        all_preds_resNet50 = []
 
-    # Erstellen des DataLoaders für Testdaten
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-    return test_loader
-
-# Load test data
-test_loader = get_test_loader(
-    data_dir= dataset_test, # Pfad zu den Testdaten
-    batch_size=64
-)
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                test_corrects += torch.sum(preds == labels.data)
 
 
-# Test the model on the test data
-def test_model(model, test_loader):
-    model.eval()
-    test_corrects = 0
-    all_labels_resNet50 = []
-    all_preds_resNet50 = []
+                # Speichern der Labels und Vorhersagen für spätere Auswertungen
+                all_labels_resNet50.extend(labels.cpu().numpy())
+                all_preds_resNet50.extend(preds.cpu().numpy())
 
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+        # Convert numerical labels and predictions to class names
+        #true_labels = [class_names[i] for i in all_labels_resNet50]
+        #predicted_labels = [class_names[i] for i in all_preds_resNet50]
 
-            outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-            test_corrects += torch.sum(preds == labels.data)
+        # Berechnung der Test Accuracy
+        test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
+        print(f'Test Accuracy: {test_acc_resNet50:.4f}')
 
+        # Berechnung von Precision, Recall und F1-Score
+        precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
+        
+        print(f'Test Accuracy: {test_acc_resNet50:.4f}')
+        print(f'Precision: {precision_resNet50:.4f}')
+        print(f'Recall: {recall_resNet50:.4f}')
+        print(f'F1-Score: {f1_resNet50:.4f}')
+        
+        print(f'Labels Testdaten: {all_labels_resNet50}')
+        print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
+        # Rückgabe der Metriken
+        return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50
 
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
-            all_labels_resNet50.extend(labels.cpu().numpy())
-            all_preds_resNet50.extend(preds.cpu().numpy())
-
-    # Convert numerical labels and predictions to class names
-    #true_labels = [class_names[i] for i in all_labels_resNet50]
-    #predicted_labels = [class_names[i] for i in all_preds_resNet50]
-
-    # Berechnung der Test Accuracy
-    test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-
-    # Berechnung von Precision, Recall und F1-Score
-    precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
-    
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-    print(f'Precision: {precision_resNet50:.4f}')
-    print(f'Recall: {recall_resNet50:.4f}')
-    print(f'F1-Score: {f1_resNet50:.4f}')
-    
-    print(f'Labels Testdaten: {all_labels_resNet50}')
-    print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
-    # Rückgabe der Metriken
-    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50
-
-# Testen auf Testdaten und Speichern der Metriken und label
-test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(resnet50_model, test_loader)
+    # Testen auf Testdaten und Speichern der Metriken und label
+    test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(resnet50_model, test_loader)
 
 
 ###################################################################################################
@@ -168,6 +170,87 @@ if False:
                 # Testen auf Testdaten und Speichern der Metriken und label
                 test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(alexnet_model, test_loader)
 
+###################################################################################################
+#
+# Test model on resnet50 model
+#
+###################################################################################################
+# get test loader
+def get_test_loader(data_dir,
+                    batch_size,
+                    shuffle=True):
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225],
+    )
+
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),   #Bildgröße anpassen
+        transforms.ToTensor(),
+        normalize,
+    ])
+    
+
+    # Lade den Testdatensatz
+    test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+
+    # Erstellen des DataLoaders für Testdaten
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+
+    return test_loader
+
+# Load test data
+test_loader = get_test_loader(
+    data_dir= dataset_test, # Pfad zu den Testdaten
+    batch_size=64
+)
+
+
+# Test the model on the test data
+def test_model(model, test_loader):
+    model.eval()
+    test_corrects = 0
+    all_labels_ViT = []
+    all_preds_ViT = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            test_corrects += torch.sum(preds == labels.data)
+
+
+            # Speichern der Labels und Vorhersagen für spätere Auswertungen
+            all_labels_ViT.extend(labels.cpu().numpy())
+            all_preds_ViT.extend(preds.cpu().numpy())
+
+    # Convert numerical labels and predictions to class names
+    #true_labels = [class_names[i] for i in all_labels_resNet50]
+    #predicted_labels = [class_names[i] for i in all_preds_resNet50]
+
+    # Berechnung der Test Accuracy
+    test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
+    print(f'Test Accuracy: {test_acc_ViT:.4f}')
+
+    # Berechnung von Precision, Recall und F1-Score
+    precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
+    
+    print(f'Test Accuracy: {test_acc_ViT:.4f}')
+    print(f'Precision: {precision_ViT:.4f}')
+    print(f'Recall: {recall_ViT:.4f}')
+    print(f'F1-Score: {f1_ViT:.4f}')
+    
+    print(f'Labels Testdaten: {all_labels_ViT}')
+    print(f'vorhergesagte Testdaten: {all_preds_ViT}')
+    # Rückgabe der Metriken
+    return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
+
+# Testen auf Testdaten und Speichern der Metriken und label
+test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(ViT_model, test_loader)
+
 
 ###################################################################################################
 ###Comparison of the classification methods in the testing stage
@@ -207,12 +290,26 @@ plt.clf()  # Löscht die Figur für den nächsten Plot
 ###Confusion Matrix
 ###################################################################################################
 # Confusion Matrix: ResNet50
-conf_matrix_resNet50 = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
+if False:
+    conf_matrix_resNet50 = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
+
+    # Visualisierung der Confusion Matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix_resNet50, annot=True, fmt='g', cmap='Blues', cbar=False)
+    plt.title('Confusion Matrix ResNet50')
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.show()
+
+    plt.clf()  # Löscht die Figur für den nächsten Plot
+
+# Confusion Matrix: ViT
+conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
 # Visualisierung der Confusion Matrix
 plt.figure(figsize=(10, 7))
-sns.heatmap(conf_matrix_resNet50, annot=True, fmt='g', cmap='Blues', cbar=False)
-plt.title('Confusion Matrix ResNet50')
+sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
+plt.title('Confusion Matrix Vision Transformer')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
