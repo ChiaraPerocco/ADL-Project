@@ -28,6 +28,7 @@ import optuna
 import matplotlib.pyplot as plt
 
 import os
+
 # Absoluten Pfad des aktuellen Skripts ermitteln
 current_dir = os.path.dirname(__file__)
 print(current_dir)
@@ -38,9 +39,11 @@ dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
 dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
 
 num_classes = 5
+
 # Device configuration
-device = torch.device('cuda')
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
+
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
                            data_dir_valid,
