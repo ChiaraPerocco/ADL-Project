@@ -33,13 +33,13 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # Relativen Pfad zum Zielordner setzen
-dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "train")
-dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
-dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
+dataset_train = os.path.join(current_dir, "Sign Language", "train")
+dataset_val = os.path.join(current_dir, "Sign Language", "val")
+dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
 num_classes = 5
 # Device configuration
-device = torch.device('cuda')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
@@ -196,7 +196,7 @@ def objective(trial):
 
 # Run the Optuna study
 study = optuna.create_study(direction="maximize") # is it minimize or maximize
-study.optimize(objective, n_trials=20)
+study.optimize(objective, n_trials=1)
 
 # Print the best hyperparameters
 best_params = study.best_params
