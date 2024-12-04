@@ -25,9 +25,9 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "train")
-dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
-dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
+dataset_train = os.path.join(current_dir, "Sign Language", "train")
+dataset_val = os.path.join(current_dir, "Sign Language", "val")
+dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
 # Number of classes in data set
 num_classes = 5
