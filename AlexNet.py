@@ -29,7 +29,7 @@ dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # Number of classes
-num_classes = 5
+num_classes = 26
 
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
     normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
@@ -418,7 +418,7 @@ test_loader = get_test_loader(
 )
 
 # Class name list
-#class_names = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
+#class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
 # Test the model on the test data
 def test_model(model, test_loader):

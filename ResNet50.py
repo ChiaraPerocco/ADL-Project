@@ -30,7 +30,7 @@ dataset_val = os.path.join(current_dir, "Sign Language", "val")
 dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
 # Number of classes in data set
-num_classes = 5
+num_classes = 26
 
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -289,7 +289,7 @@ test_loader = get_test_loader(
 )
 
 # Class name list
-class_names = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
+class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
 # Test the model on the test data
 def test_model(model, test_loader):

@@ -38,7 +38,7 @@ dataset_train = os.path.join(current_dir, "Sign Language", "train")
 dataset_val = os.path.join(current_dir, "Sign Language", "val")
 dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
-num_classes = 5
+num_classes = 26
 
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -120,7 +120,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 50)
+    num_epochs = trial.suggest_int('num_epochs', 1, 20)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -301,51 +301,52 @@ test_loader = get_test_loader(
 )
 #test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=best_params['batch_size'], shuffle=False)
 
-# Class name list
-class_names = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
-# Testen des Modells auf den Testdaten
-def test_model(model, test_loader):
-    model.eval()
-    test_corrects = 0
-    all_labels_ViT = []
-    all_preds_ViT = []
+if False:
+    # Class name list
+    class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+    # Testen des Modells auf den Testdaten
+    def test_model(model, test_loader):
+        model.eval()
+        test_corrects = 0
+        all_labels_ViT = []
+        all_preds_ViT = []
 
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-            outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-            test_corrects += torch.sum(preds == labels.data)
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                test_corrects += torch.sum(preds == labels.data)
 
 
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
-            all_labels_ViT.extend(labels.cpu().numpy())
-            all_preds_ViT.extend(preds.cpu().numpy())
+                # Speichern der Labels und Vorhersagen für spätere Auswertungen
+                all_labels_ViT.extend(labels.cpu().numpy())
+                all_preds_ViT.extend(preds.cpu().numpy())
 
-    # Berechnung der Test Accuracy
-    test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
-    print(f'Test Accuracy: {test_acc_ViT:.4f}')
+        # Berechnung der Test Accuracy
+        test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
+        print(f'Test Accuracy: {test_acc_ViT:.4f}')
 
-    # Berechnung von Precision, Recall und F1-Score
-    precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
-    
-    print(f'Test Accuracy: {test_acc_ViT:.4f}')
-    print(f'Precision: {precision_ViT:.4f}')
-    print(f'Recall: {recall_ViT:.4f}')
-    print(f'F1-Score: {f1_ViT:.4f}')
-    
-    print(f'Labels Testdaten: {all_labels_ViT}')
-    print(f'vorhergesagte Testdaten: {all_preds_ViT}')
-    # Rückgabe der Metriken
-    return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
+        # Berechnung von Precision, Recall und F1-Score
+        precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
+        
+        print(f'Test Accuracy: {test_acc_ViT:.4f}')
+        print(f'Precision: {precision_ViT:.4f}')
+        print(f'Recall: {recall_ViT:.4f}')
+        print(f'F1-Score: {f1_ViT:.4f}')
+        
+        print(f'Labels Testdaten: {all_labels_ViT}')
+        print(f'vorhergesagte Testdaten: {all_preds_ViT}')
+        # Rückgabe der Metriken
+        return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
 
-# Testen auf Testdaten und Speichern der Metriken und label
-test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(final_model, test_loader)
+    # Testen auf Testdaten und Speichern der Metriken und label
+    test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(final_model, test_loader)
 
-# Testen auf Testdaten
-# test_model(final_model, test_loader)
+    # Testen auf Testdaten
+    # test_model(final_model, test_loader)
 
 # Save the entire model
 torch.save(final_model, 'ViT_model.pth')
@@ -523,7 +524,7 @@ from torchvision import datasets, utils, models
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "test")
+dataset = os.path.join(current_dir, "Sign Language", "test")
 
 unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
@@ -545,7 +546,7 @@ def compute_saliency_and_save():
 #if __name__ == "__main__":
 # Create folder to saliency maps
 #save_path = PATH + 'results/'
-save_path = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\Output_images\results"
+save_path = os.path.join(current_dir, "Saliency Maps", "results")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
