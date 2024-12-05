@@ -34,6 +34,7 @@ num_classes = 26
 
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(device)
 
 def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
                            data_dir_valid,
@@ -111,7 +112,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 50)
+    num_epochs = trial.suggest_int('num_epochs', 3, 3)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -231,6 +232,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
+
+    # Initialize lists to track loss and accuracy for all epochs
+    train_losses = []
+    train_accuracies = []
+    val_losses = []
+    val_accuracies = []
     
     # Train the model with the best hyperparameters
     for epoch in range(num_epochs):
@@ -254,6 +261,10 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = running_corrects.double() / len(train_loader.dataset)
 
+        # Store the training loss and accuracy for this epoch
+        train_losses.append(epoch_loss)
+        train_accuracies.append(epoch_acc.item())
+
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
 
     # Evaluate on the validation data
@@ -274,8 +285,25 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     val_loss = val_loss / len(valid_loader.dataset)
     val_acc = val_corrects.double() / len(valid_loader.dataset)
+
+    # Store the validation loss and accuracy for this epoch
+    val_losses.append(val_loss)
+    val_accuracies.append(val_acc.item())
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
+
+    # Save the training and validation metrics for all epochs
+    checkpoint = {
+        'train_losses': train_losses,
+        'train_accuracies': train_accuracies,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies,
+        'hyper_params': best_params,
+    }
+
+    # Save the checkpoint
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values.pth"))
+
 
     return model
 
@@ -318,6 +346,7 @@ def test_model(model, test_loader):
 
     # Berechnung der Test Accuracy
     test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
+
     print(f'Test Accuracy: {test_acc_resNet50:.4f}')
 
     # Berechnung von Precision, Recall und F1-Score
@@ -507,7 +536,7 @@ from torchvision import datasets, utils, models
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = os.path.join(current_dir, "facial_emotion_dataset", "dataset_output - Kopie", "test")
+dataset = os.path.join(current_dir, "Sign Language", "test")
 
 unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
@@ -528,7 +557,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = r"\\nas.ads.mwn.de\hm-asal02oc\Benutzer\Dokumente\Advaned Deep Learning\Team Projekt\Results\results"
+save_path = os.path.join(current_dir, "Saliency Maps", "results","results_resnet")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
