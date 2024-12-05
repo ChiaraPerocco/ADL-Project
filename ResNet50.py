@@ -112,7 +112,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 2, 2)
+    num_epochs = trial.suggest_int('num_epochs', 10, 10)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
