@@ -38,13 +38,22 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #
 ###################################################################################################
 ### Import validation accuracy 
-resnet50_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "resent_values.path"))
+resnet50_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "resnet_values.pth"))
 # Retrieve saved variables
-resnet50_num_epoch = resnet50_params['best_params']['num_epochs']
+resnet50_hyper_params = resnet50_params['hyper_params']
+resnet50_num_epoch = resnet50_hyper_params['num_epochs']
 resnet50_val_loss = resnet50_params['val_losses']
 resnet50_val_acc = resnet50_params['val_accuracies']
 resnet50_train_loss = resnet50_params['train_losses']
 resnet50_train_acc = resnet50_params['train_accuracies']
+print(resnet50_train_acc)
+print(resnet50_val_acc)
+print(resnet50_val_loss)
+print(resnet50_train_loss)
+
+epochs = list(range(1, resnet50_num_epoch + 1))
+print(epochs)
+(len(epochs) == len(resnet50_train_loss) == len(resnet50_val_loss) == len(resnet50_train_acc) == len(resnet50_val_acc))
 
 # get test loader
 if True:
@@ -307,32 +316,42 @@ plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
 
-plt.clf()  # Löscht die Figur für den nächsten Plot
-
-# Create training and validation accuracy plot
-epochs = np.arange(1, resnet50_num_epoch)
+# Validation and training Loss/accuracy
+epochs = list(range(1, resnet50_num_epoch + 1))
+print(epochs)
 
 plt.figure(figsize=(10, 6))
 
-# Plot loss
-plt.subplot(1, 2, 1)
-plt.plot(epochs, resnet50_train_loss, label='Training Loss')
-plt.plot(epochs, resnet50_val_loss, label='Validation Loss')
+plt.plot(epochs, resnet50_train_loss, label = "train loss") # plotting the Loss curve
+plt.plot(epochs, resnet50_val_loss, label = "validation loss")
+plt.plot(epochs, resnet50_train_acc, label = "train accuracy") # plotting accuracy
+plt.plot(epochs, resnet50_val_acc, label = "validation accuracy")
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.title('Loss per Epoch')
 plt.legend()
+plt.show()
 
-# Plot accuracy
-plt.subplot(1, 2, 2)
-plt.plot(epochs, resnet50_train_acc, label='Training Accuracy')
-plt.plot(epochs, resnet50_val_acc, label='Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.title('Accuracy per Epoch')
-plt.legend()
+# Plot with two y-axis one for accuracy, one for loss
+fig, ax1 = plt.subplots(figsize=(10, 6))
 
-plt.tight_layout()
+# Plot loss on the left y-axis
+ax1.plot(epochs, resnet50_train_loss, label="train loss", color='r')
+ax1.plot(epochs, resnet50_val_loss, label="validation loss", color='b')
+ax1.set_xlabel('Epoch')
+ax1.set_ylabel('Loss')
+ax1.tick_params(axis='y')
+
+# Create another y-axis for accuracy
+ax2 = ax1.twinx()
+ax2.plot(epochs, resnet50_train_acc, label="train accuracy", color='g')
+ax2.plot(epochs, resnet50_val_acc, label="validation accuracy", color='y')
+ax2.set_ylabel('Accuracy')
+ax2.tick_params(axis='y')
+
+# Add legends
+ax1.legend(loc='upper left')
+ax2.legend(loc='lower left')
+
 plt.show()
 
 ###################################################################################################
@@ -352,28 +371,28 @@ if False:
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
 
-# Confusion Matrix: ViT
-conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
+    # Confusion Matrix: ViT
+    conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
-# Visualisierung der Confusion Matrix
-plt.figure(figsize=(10, 7))
-sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
-plt.title('Confusion Matrix Vision Transformer')
-plt.xlabel('Predicted labels')
-plt.ylabel('True labels')
-plt.show()
+    # Visualisierung der Confusion Matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
+    plt.title('Confusion Matrix Vision Transformer')
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.show()
 
-plt.clf()  # Löscht die Figur für den nächsten Plot
+    plt.clf()  # Löscht die Figur für den nächsten Plot
 
-"""
-# Confusion Matrix: AlexNet
-conf_matrix_alexNet = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
+    """
+    # Confusion Matrix: AlexNet
+    conf_matrix_alexNet = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
 
-# Visualisierung der Confusion Matrix
-plt.figure(figsize=(10, 7))
-sns.heatmap(conf_matrix_alexNet, annot=True, fmt='g', cmap='Blues', cbar=False)
-plt.title('Confusion Matrix AlexNet')
-plt.xlabel('Predicted labels')
-plt.ylabel('True labels')
-plt.show()
-"""
+    # Visualisierung der Confusion Matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix_alexNet, annot=True, fmt='g', cmap='Blues', cbar=False)
+    plt.title('Confusion Matrix AlexNet')
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.show()
+    """
