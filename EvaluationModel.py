@@ -25,13 +25,13 @@ dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
 
 ### Import the models
-resnet50_model = torch.load('resnet50_model.pth')
+#resnet50_model = torch.load('resnet50_model.pth')
 #alexnet_model = torch.load('alexnet_model.pth')
-#ViT_model = torch.load('ViT_model.pth')
+ViT_model = torch.load('ViT_model.pth')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
+"""
 ###################################################################################################
 #
 # Test model on resnet50 model
@@ -54,9 +54,9 @@ print(resnet50_train_loss)
 epochs = list(range(1, resnet50_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(resnet50_train_loss) == len(resnet50_val_loss) == len(resnet50_train_acc) == len(resnet50_val_acc))
-
+"""
 # get test loader
-if True:
+if False:
     def get_test_loader(data_dir,
                         batch_size,
                         shuffle=True):
@@ -189,7 +189,7 @@ if False:
 # Test model on ViT model
 #
 ###################################################################################################
-if False:
+if True:
     # get test loader
     def get_test_loader(data_dir,
                         batch_size,
@@ -300,7 +300,7 @@ plt.show()
 plt.clf()  # Löscht die Figur für den nächsten Plot
 
 """
-
+"""
 ###################################################################################################
 ### Evaluation: ResNet50
 ###################################################################################################
@@ -383,8 +383,8 @@ if False:
     plt.show()
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
-
-    """
+"""
+"""
     # Confusion Matrix: AlexNet
     conf_matrix_alexNet = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
 
@@ -395,4 +395,19 @@ if False:
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
     plt.show()
-    """
+"""
+
+if True:
+
+    # Confusion Matrix: ViT
+    conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
+
+    # Visualisierung der Confusion Matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
+    plt.title('Confusion Matrix Vision Transformer')
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.show()
+
+    plt.clf()  # Löscht die Figur für den nächsten Plot
