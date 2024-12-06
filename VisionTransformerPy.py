@@ -26,6 +26,7 @@ import optuna
 #from torchcam.methods import SmoothGradCAMpp
 #from torchcam.utils import overlay_mask
 import matplotlib.pyplot as plt
+from Augmentation import AugmentHandFocus
 
 import os
 
@@ -65,11 +66,12 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
     # Augmentierung für Trainingsdaten (falls aktiviert)
     if augment:
         train_transform = transforms.Compose([
-        transforms.Resize((256, 256)),  # Resize to 256x256 first
-        transforms.RandomCrop(224, padding=4), #zufälliges zuschneiden auf 224x224
-        transforms.RandomHorizontalFlip(), #zufälliges horizontales spiegeln
-        transforms.ToTensor(),
-        normalize,
+            transforms.Resize((256, 256)),
+            transforms.RandomCrop(224, padding=4),
+            transforms.RandomHorizontalFlip(),        
+            AugmentHandFocus(), 
+            transforms.ToTensor(),
+            normalize,
     ])
         
     else:
