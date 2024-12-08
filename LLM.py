@@ -7,7 +7,10 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
 
-if True:
+# get the path of current_dir
+current_dir = os.path.dirname(__file__)
+
+if False:
     from diffusers import DiffusionPipeline
 
     #pipe = DiffusionPipeline.from_pretrained("fluently/Fluently-XL-v2")
@@ -16,14 +19,17 @@ if True:
     pipe = DiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
 
 
-    prompt = "Create picture of a sad person with a caption."
+    prompt = "Create picture of a sign language letter."
     image = pipe(prompt).images[0]
 
     # Save the image to a folder
-    image_path = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\Output_images\generated_image.png'  # Change the path as needed
+    image_path = os.path.join(current_dir, "DiffusionModelOutput", 'generated_image.png')  # Change the path as needed
     image.save(image_path)
 
     print(f"Image saved at {image_path}")
+
+image_path = os.path.join(current_dir, "DiffusionModelOutput", 'generated_image.png')
+
 
 if False:
     import torch
@@ -154,7 +160,7 @@ def generate_answer_for_section(question, aspect):
     
     # Step 2: Use search results as context and generate a focused response
     input_text = f"Question: {specific_question}\nContext: {search_results}"
-    answer = qa_pipeline(input_text, max_length=300, min_length = 200, do_sample=False)[0]['generated_text']
+    answer = qa_pipeline(input_text, max_length=200, min_length = 50, do_sample=False)[0]['generated_text']
     
     return answer
 
@@ -251,6 +257,6 @@ def create_article_pdf(question, image_path, caption, output_pdf_path):
     print(f"Article PDF created at: {output_pdf_path}")
 
 # Main usage
-question = "What is the neuroscience behind sadness?"
-pdf_path = r'C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\Team Project Empty\Output_images\sad_text.pdf'
+question = "How has the use of sign language evolved over the years?"
+pdf_path = os.path.join(current_dir, "Article", 'article.pdf') 
 create_article_pdf(question, image_path, caption, pdf_path)
