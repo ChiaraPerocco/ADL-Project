@@ -23,6 +23,7 @@ from sklearn import metrics  # for confusion matrix
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import seaborn as sns # Confusion Matrix
 import optuna
+from torchvision.utils import save_image
 #from torchcam.methods import SmoothGradCAMpp
 #from torchcam.utils import overlay_mask
 import matplotlib.pyplot as plt
@@ -90,6 +91,20 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
     # DataLoader für Training und Validierung
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
+    
+    # Augmentierte Bilder speichern
+    augmented_images_folder = os.path.join(current_dir, "Augmented_Images")
+    os.makedirs(augmented_images_folder, exist_ok=True)
+
+    print("Speichere augmentierte Bilder...")
+    for i, (images, _) in enumerate(train_loader):
+        image_filename = f"augmented_image_{i + 1}.png"
+        image_path = os.path.join(augmented_images_folder, image_filename)
+        save_image(images[0], image_path)  # Erstes Bild im Batch speichern
+        if i >= 5:  # Optional: Nur die ersten 5 Bilder speichern
+            break
+    print(f"Augmentierte Bilder gespeichert in: {augmented_images_folder}")
+
 
     return train_loader, valid_loader
 
