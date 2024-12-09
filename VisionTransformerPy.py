@@ -45,13 +45,15 @@ num_classes = 26
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
+save_augmented_dir = os.path.join(current_dir, "Augmentation Images")
 
 
-def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
+def get_train_valid_loader(data_dir_train, 
                            data_dir_valid,
-                           batch_size, #Anzahl der Bilder pro Batch (Mini-Batch) während des Trainings oder der Validierung.
-                           augment, #Boolescher Wert, der angibt, ob Datenaugmentation verwendet werden soll (z. B. zufälliges Beschneiden oder Spiegeln der Bilder).
-                           shuffle=True): #Ob die Daten vor dem Aufteilen in Trainings- und Validierungssets zufällig gemischt werden sollen
+                           batch_size, 
+                           augment, 
+                           save_augmented_dir=save_augmented_dir,  # Optionaler Parameter für die Speicherung
+                           shuffle=True):
     normalize = transforms.Normalize(
         mean=[0.4914, 0.4822, 0.4465],
         std=[0.2023, 0.1994, 0.2010],
@@ -59,8 +61,8 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
 
     # Transformationen für Validierungsdaten
     valid_transform = transforms.Compose([
-        transforms.Resize((224, 224)), # Ändern der Größe auf 224x224 Pixel
-        transforms.ToTensor(), # Umwandlung in einen Tensor
+        transforms.Resize((224, 224)), 
+        transforms.ToTensor(),
         normalize,
     ])
 
@@ -73,8 +75,7 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
             AugmentHandFocus(), 
             transforms.ToTensor(),
             normalize,
-    ])
-        
+        ])
     else:
         train_transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -82,29 +83,26 @@ def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz ge
             normalize,
         ])
 
-    # Lade den Trainingsdatensatz (ImageFolder passt zur Ordnerstruktur)
+    # Lade den Trainingsdatensatz
     train_dataset = datasets.ImageFolder(root=data_dir_train, transform=train_transform)
 
-    # Lade den Validierungsdatensatz (separate Validierungsdaten)
+    # Lade den Validierungsdatensatz
     valid_dataset = datasets.ImageFolder(root=data_dir_valid, transform=valid_transform)
 
     # DataLoader für Training und Validierung
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
-    
-    # Augmentierte Bilder speichern
-    augmented_images_folder = os.path.join(current_dir, "Augmented_Images")
-    os.makedirs(augmented_images_folder, exist_ok=True)
 
-    print("Speichere augmentierte Bilder...")
-    for i, (images, _) in enumerate(train_loader):
-        image_filename = f"augmented_image_{i + 1}.png"
-        image_path = os.path.join(augmented_images_folder, image_filename)
-        save_image(images[0], image_path)  # Erstes Bild im Batch speichern
-        if i >= 5:  # Optional: Nur die ersten 5 Bilder speichern
-            break
-    print(f"Augmentierte Bilder gespeichert in: {augmented_images_folder}")
-
+    # Wenn ein Ordner zum Speichern der augmentierten Bilder angegeben wurde, speichern wir die Bilder
+    if save_augmented_dir:
+        os.makedirs(save_augmented_dir, exist_ok=True)  # Erstelle den Ordner, falls er nicht existiert
+        
+        # Speichern der augmentierten Bilder
+        augment = AugmentHandFocus()  # Initialisieren der Augmentierungsklasse
+        for idx, (img, label) in enumerate(train_dataset):
+            # Berechne den Dateipfad zum Speichern
+            save_path = os.path.join(save_augmented_dir, f"augmented_{idx}.png")
+            augment.save_augmented_image(img, save_path)
 
     return train_loader, valid_loader
 
@@ -145,6 +143,7 @@ def objective(trial):
         data_dir_valid=dataset_val,
         batch_size=batch_size,
         augment=True,
+        save_augmented_dir=save_augmented_dir,
         shuffle=True
     )
     # DataLoader
@@ -235,6 +234,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         data_dir_train=dataset_train,
         data_dir_valid=dataset_val,
         batch_size=batch_size,
+        save_augmented_dir=save_augmented_dir,
         augment=True,
         shuffle=True
     )

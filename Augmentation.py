@@ -5,6 +5,7 @@
 #####################################################################################
 
 from PIL import Image, ImageEnhance, ImageFilter
+import os
 
 class AugmentHandFocus:
     def __init__(self, brightness_factor=1.2, contrast_factor=1.5, blur_radius=10, vignette_strength=0.5):
@@ -33,7 +34,11 @@ class AugmentHandFocus:
                 distance = ((x - width // 2) ** 2 + (y - height // 2) ** 2) ** 0.5
                 vignette.putpixel((x, y), int(255 * (1 - min(1, distance / (width // 1.5)))))
 
+
         # Wenden Sie die Maske an, um einen Vignette-Effekt zu erzeugen
         img = Image.composite(img, blurred, vignette)
         
         return img
+
+    def save_augmented_image(self, img, save_path):
+        img.save(save_path)  # Speichern des Bildes an einem angegebenen Pfad
