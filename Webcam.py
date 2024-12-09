@@ -43,7 +43,7 @@ def save_frame_camera_key(basename, dir_path, ext='jpg', delay=1):
             break
         
     # Close the opened webcam window
-    cv2.destroyWindow()
+    cv2.destroyWindow("Webcam")
 
 
-save_frame_camera_key('camera_capture')
+#save_frame_camera_key('camera_capture', dir_path=dir_path)

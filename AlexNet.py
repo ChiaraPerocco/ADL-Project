@@ -360,6 +360,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Initialize lists to track loss and accuracy for all epochs
+    train_losses = []
+    train_accuracies = []
+    val_losses = []
+    val_accuracies = []
     
     # Train the model with the best hyperparameters
     for epoch in range(num_epochs):
@@ -383,6 +389,10 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = running_corrects.double() / len(train_loader.dataset)
 
+        # Store the training loss and accuracy for this epoch
+        train_losses.append(epoch_loss)
+        train_accuracies.append(epoch_acc.item())
+
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
 
     # Evaluate on the validation data
@@ -403,8 +413,24 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     val_loss = val_loss / len(valid_loader.dataset)
     val_acc = val_corrects.double() / len(valid_loader.dataset)
+
+    # Store the validation loss and accuracy for this epoch
+    val_losses.append(val_loss)
+    val_accuracies.append(val_acc.item())
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
+
+    # Save the training and validation metrics for all epochs
+    checkpoint = {
+        'train_losses': train_losses,
+        'train_accuracies': train_accuracies,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies,
+        'hyper_params': best_params,
+    }
+
+    # Save the checkpoint
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values.pth"))
 
     return model
 
@@ -464,13 +490,6 @@ def test_model(model, test_loader):
 
 # Testen auf Testdaten und Speichern der Metriken und label
 test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(final_model, test_loader)
-
-
-
-
-
-
-
 
 
 # Save the entire model

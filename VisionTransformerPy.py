@@ -137,7 +137,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 20)
+    num_epochs = trial.suggest_int('num_epochs', 1, 10)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -260,6 +260,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate)
+
+    # Initialize lists to track loss and accuracy for all epochs
+    train_losses = []
+    train_accuracies = []
+    val_losses = []
+    val_accuracies = []
     
     # Trainiere das Modell mit den besten Hyperparametern
     for epoch in range(num_epochs):
@@ -283,6 +289,10 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = running_corrects.double() / len(train_loader.dataset)
 
+        # Store the training loss and accuracy for this epoch
+        train_losses.append(epoch_loss)
+        train_accuracies.append(epoch_acc.item())
+
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
 
     # Evaluieren auf den Validierungsdaten
@@ -303,8 +313,24 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     val_loss = val_loss / len(valid_loader.dataset)
     val_acc = val_corrects.double() / len(valid_loader.dataset)
+
+    # Store the validation loss and accuracy for this epoch
+    val_losses.append(val_loss)
+    val_accuracies.append(val_acc.item())
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
+
+    # Save the training and validation metrics for all epochs
+    checkpoint = {
+        'train_losses': train_losses,
+        'train_accuracies': train_accuracies,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies,
+        'hyper_params': best_params,
+    }
+
+    # Save the checkpoint
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values.pth"))
 
     return model
 
