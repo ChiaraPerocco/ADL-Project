@@ -22,11 +22,11 @@ from LLM import create_article_pdf, generate_image_caption, generate_answer_for_
 
 ### Load models
 #device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-ViT = torch.load('ViT_model.pth', map_location=torch.device('cpu'))
+#ViT = torch.load('ViT_model.pth', map_location=torch.device('cpu'))
 
 # just for a test run
-#ViT = torch.load(r"C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\resnet50_model.pth", map_location=torch.device('cpu'))
 batch_size = 64 # need to include hyperparameters
+ViT = torch.load('ViT_model.pth')
 #ResNet = torch.load('resnet50_model.pth')
 #AlexNet = torch.load('alexnet_model.pth')
 
