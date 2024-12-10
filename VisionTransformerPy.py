@@ -27,7 +27,7 @@ from torchvision.utils import save_image
 #from torchcam.methods import SmoothGradCAMpp
 #from torchcam.utils import overlay_mask
 import matplotlib.pyplot as plt
-from Augmentation import AugmentHandFocus
+from Augmentation_CV import AugmentHandFocus
 
 import os
 
@@ -56,7 +56,7 @@ def get_train_valid_loader(data_dir_train,
                            data_dir_valid,
                            batch_size, 
                            augment, 
-                           save_augmented_dir=None,  # Optionaler Parameter für die Speicherung
+                           save_augmented_dir,  # Optionaler Parameter für die Speicherung
                            shuffle=True):
     normalize = transforms.Normalize(
         mean=[0.4914, 0.4822, 0.4465],
@@ -76,7 +76,7 @@ def get_train_valid_loader(data_dir_train,
             transforms.Resize((256, 256)),
             transforms.RandomCrop(224, padding=4),
             transforms.RandomHorizontalFlip(),        
-            AugmentHandFocus(), 
+            #AugmentHandFocus(), 
             transforms.ToTensor(),
             normalize,
         ])
@@ -98,14 +98,14 @@ def get_train_valid_loader(data_dir_train,
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
     # Wenn ein Ordner zum Speichern der augmentierten Bilder angegeben wurde, speichern wir die Bilder
-    if save_augmented_dir:
-        os.makedirs(save_augmented_dir, exist_ok=True)  # Erstelle den Ordner, falls er nicht existiert
-        
-        augment = AugmentHandFocus()  # Initialisiere die Augmentierungslogik
-        for idx, (img, label) in enumerate(train_dataset):
-            # Berechne den Dateipfad zum Speichern
-            save_path = os.path.join(save_augmented_dir, f"augmented_{idx}.png")
-            augment.save_augmented_image(img, save_path)
+    #if save_augmented_dir:
+    #    os.makedirs(save_augmented_dir, exist_ok=True)  # Erstelle den Ordner, falls er nicht existiert
+    #    
+    #    augment = AugmentHandFocus()  # Initialisiere die Augmentierungslogik
+    #    for idx, (img, label) in enumerate(train_dataset):
+    #        # Berechne den Dateipfad zum Speichern
+    #        save_path = os.path.join(save_augmented_dir, f"augmented_{idx}.png")
+    #        augment.save_augmented_image(img, save_path)
 
 
     return train_loader, valid_loader
@@ -137,9 +137,9 @@ def get_test_loader(data_dir,
 # https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 def objective(trial):
     # Suggest hyperparameters
-    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 2)
+    learning_rate = trial.suggest_float('learning_rate', 0.0008, 0.0008, log=True)
+    batch_size = trial.suggest_categorical('batch_size', [64])
+    num_epochs = trial.suggest_int('num_epochs', 10, 10)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -332,8 +332,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         'val_accuracies': val_accuracies,
         'hyper_params': best_params,
     }
+    # Create Evaluation folder
+    # Define the directory path
+    eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
 
-    # Save the checkpoint
+    # Create the folder if it doesn't exist
+    os.makedirs(eval_folder_path, exist_ok=True)    # Save the checkpoint
     torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values.pth"))
 
     return model

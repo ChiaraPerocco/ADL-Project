@@ -23,9 +23,10 @@ from LLM import create_article_pdf, generate_image_caption, generate_answer_for_
 ### Load models
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
+
+
 #ViT = torch.load('ViT_model.pth', map_location=torch.device('cpu'))
 
-"""
 # just for a test run
 batch_size = 64 # need to include hyperparameters
 ViT = torch.load('ViT_model.pth')
@@ -133,4 +134,7 @@ if __name__ == "__main__":
     llm = input("Möchten sie nun einen Artikel zu dem Bild erhalten?- Ja/Nein \n")
     question = input("Soll der Artikel auf einer bestimmten Frage basieren oder soll ein default Artikel erstellt werden? -Default/Own")
     main(photo, photo_shot, run)
-"""
+
+
+# Call main function with all inputs and necessary variables
+main(photo, photo_shot, run, model, llm, question, dir_path, current_dir, image_path, caption)
