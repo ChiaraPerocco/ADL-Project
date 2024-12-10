@@ -110,8 +110,8 @@ def get_test_loader(data_dir,
 # https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 def objective(trial):
     # Suggest hyperparameters
-    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
+    learning_rate = trial.suggest_float('learning_rate', 0.0008, 0.0008, log=True)
+    batch_size = trial.suggest_categorical('batch_size', [64])
     num_epochs = trial.suggest_int('num_epochs', 10, 10)
 
     # Load data with current batch size
@@ -563,7 +563,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results","results_resnet")
+save_path = os.path.join(current_dir, "Saliency Maps", "results_resnet")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')

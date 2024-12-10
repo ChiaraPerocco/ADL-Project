@@ -395,28 +395,28 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
 
-    # Evaluate on the validation data
-    model.eval()
-    val_loss = 0.0
-    val_corrects = 0
-    with torch.no_grad():
-        for inputs, labels in valid_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+        # Evaluate on the validation data
+        model.eval()
+        val_loss = 0.0
+        val_corrects = 0
+        with torch.no_grad():
+            for inputs, labels in valid_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-            outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-            loss = criterion(outputs, labels)
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                loss = criterion(outputs, labels)
 
-            val_loss += loss.item() * inputs.size(0)
-            val_corrects += torch.sum(preds == labels.data)
+                val_loss += loss.item() * inputs.size(0)
+                val_corrects += torch.sum(preds == labels.data)
 
-    val_loss = val_loss / len(valid_loader.dataset)
-    val_acc = val_corrects.double() / len(valid_loader.dataset)
+        val_loss = val_loss / len(valid_loader.dataset)
+        val_acc = val_corrects.double() / len(valid_loader.dataset)
 
-    # Store the validation loss and accuracy for this epoch
-    val_losses.append(val_loss)
-    val_accuracies.append(val_acc.item())
+        # Store the validation loss and accuracy for this epoch
+        val_losses.append(val_loss)
+        val_accuracies.append(val_acc.item())
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
 
