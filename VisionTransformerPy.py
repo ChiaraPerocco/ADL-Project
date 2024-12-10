@@ -45,14 +45,18 @@ num_classes = 26
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
+# Der Ordner, in dem die augmentierten Bilder gespeichert werden sollen
 save_augmented_dir = os.path.join(current_dir, "Augmentation Images")
+
+# Erstelle den Ordner, falls er nicht existiert
+os.makedirs(save_augmented_dir, exist_ok=True)
 
 
 def get_train_valid_loader(data_dir_train, 
                            data_dir_valid,
                            batch_size, 
                            augment, 
-                           save_augmented_dir=save_augmented_dir,  # Optionaler Parameter für die Speicherung
+                           save_augmented_dir=None,  # Optionaler Parameter für die Speicherung
                            shuffle=True):
     normalize = transforms.Normalize(
         mean=[0.4914, 0.4822, 0.4465],
@@ -97,12 +101,12 @@ def get_train_valid_loader(data_dir_train,
     if save_augmented_dir:
         os.makedirs(save_augmented_dir, exist_ok=True)  # Erstelle den Ordner, falls er nicht existiert
         
-        # Speichern der augmentierten Bilder
-        augment = AugmentHandFocus()  # Initialisieren der Augmentierungsklasse
+        augment = AugmentHandFocus()  # Initialisiere die Augmentierungslogik
         for idx, (img, label) in enumerate(train_dataset):
             # Berechne den Dateipfad zum Speichern
             save_path = os.path.join(save_augmented_dir, f"augmented_{idx}.png")
             augment.save_augmented_image(img, save_path)
+
 
     return train_loader, valid_loader
 
@@ -135,7 +139,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 10)
+    num_epochs = trial.suggest_int('num_epochs', 1, 2)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -392,7 +396,7 @@ if False:
     # test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'ViT_model.pth')
+torch.save(final_model, 'ViT_model_1.pth')
 ###################################################################################################
 #
 # Saliency Maps with Grad-CAM

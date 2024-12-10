@@ -6,6 +6,8 @@
 
 from PIL import Image, ImageEnhance, ImageFilter
 import os
+from torchvision import transforms
+import torch
 
 class AugmentHandFocus:
     def __init__(self, brightness_factor=1.2, contrast_factor=1.5, blur_radius=10, vignette_strength=0.5):
@@ -41,4 +43,14 @@ class AugmentHandFocus:
         return img
 
     def save_augmented_image(self, img, save_path):
-        img.save(save_path)  # Speichern des Bildes an einem angegebenen Pfad
+        """Speichert das augmentierte Bild im angegebenen Pfad"""
+        img = img.cpu()  # Sicherstellen, dass das Bild auf der CPU ist
+
+        if img.max() <= 1.0:  # Falls das Bild im Bereich [0, 1] ist, auf [0, 255] skalieren
+            img = img * 255
+        img = img.to(torch.uint8)
+
+        transform = transforms.ToPILImage()
+        pil_image = transform(img)
+
+        pil_image.save(save_path)  # Speichern des Bildes
