@@ -301,6 +301,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         'hyper_params': best_params,
     }
 
+    # Define the directory path
+    eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
+
+    # Create the folder if it doesn't exist
+    os.makedirs(eval_folder_path, exist_ok=True)
+    
     # Save the checkpoint
     torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values.pth"))
 

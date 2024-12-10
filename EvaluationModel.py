@@ -79,7 +79,7 @@ epochs = list(range(1, alexNet_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(alexNet_train_loss) == len(alexNet_val_loss) == len(alexNet_train_acc) == len(alexNet_val_acc))
 
-
+"""
 ###################################################################################################
 #
 # Test model on Vision Transformer model
@@ -99,11 +99,11 @@ print(ViT_val_acc)
 print(ViT_val_loss)
 print(ViT_train_loss)
 
-epochs = list(range(1, resnet50_num_epoch + 1))
+epochs = list(range(1, ViT_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(ViT_train_loss) == len(ViT_val_loss) == len(ViT_train_acc) == len(ViT_val_acc))
 
-"""
+
 # get test loader
 if False:
     def get_test_loader(data_dir,
@@ -460,7 +460,7 @@ ax1.legend(loc='upper left')
 ax2.legend(loc='lower left')
 
 plt.show()
-
+"""
 ###################################################################################################
 ### Evaluation: Vision Transformer
 ###################################################################################################
@@ -543,7 +543,7 @@ if False:
     plt.show()
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
-"""
+
 """
     # Confusion Matrix: AlexNet
     conf_matrix_alexNet = confusion_matrix(all_labels_alexNet, all_preds_alexNet)
