@@ -13,8 +13,8 @@ hands = mp_hands.Hands(min_detection_confidence=0.2, min_tracking_confidence=0.5
 mp_drawing = mp.solutions.drawing_utils
 
 # Pfade anpassen
-input_folder =  os.path.join(current_dir, "Sign Language", "")
-output_folder = os.path.join(current_dir, "Sign Language", "test_processed")
+input_folder =  os.path.join(current_dir, "Sign Language", "val")
+output_folder = os.path.join(current_dir, "Sign Language", "val_processed")
 
 # Erstelle den Zielordner, falls er nicht existiert
 os.makedirs(output_folder, exist_ok=True)
