@@ -28,28 +28,40 @@ if False:
 
     print(f"Image saved at {image_path}")
 
-image_path = os.path.join(current_dir, "DiffusionModelOutput", 'generated_image.png')
+#image_path = os.path.join(current_dir, "DiffusionModelOutput", 'generated_image.png')
+
+from diffusers import DiffusionPipeline
+import torch
+import os
+
+# Load the pipeline
+pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", torch_dtype=torch.float16)
+pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+
+# Prompt user for desired image name
+image_filename = input("Enter the desired base name for your images (e.g., article_image): ")
 
 
-if False:
-    import torch
-    from diffusers import StableDiffusion3Pipeline
+# Define the prompts for variety
+prompts = [
+    "An image of a squirrel in Picasso style",
+    "A squirrel in a surreal landscape with vibrant colors",
+    "A squirrel in the style of abstract expressionism",
+    "A whimsical painting of a squirrel with geometric shapes"
+]
 
-    pipe = StableDiffusion3Pipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5")
-    #pipe = pipe.to("cuda")
-
-    image = pipe(
-        "A capybara holding a sign that reads Hello World",
-        num_inference_steps=28,
-        guidance_scale=3.5,
-    ).images[0]
-
-    # Step 5: Save the image to a folder
-    #image_path = r'C:\Users\annar\Documents\Master\Advanced Deep Learning\ADL_team_project_master\Output images\generated_image.png'  # Change the path as needed
-    #image.save(image_path)
-
-    #print(f"Image saved at {image_path}")
+# Generate and save 4 different images
+for i, prompt in enumerate(prompts, 1):
+    image = pipeline(prompt).images[0]  # Generate the image
     
+    # Create a unique filename for each image
+    image_path = os.path.join(current_dir, "DiffusionModelOutput", f"{image_filename}_{i}.png")
+    
+    # Save the image
+    image.save(image_path)
+    print(f"Image {i} saved as {image_path}")
+
+
 ###################################################################################################
 #
 # Image caption generation
@@ -160,7 +172,7 @@ def generate_answer_for_section(question, aspect):
     
     # Step 2: Use search results as context and generate a focused response
     input_text = f"Question: {specific_question}\nContext: {search_results}"
-    answer = qa_pipeline(input_text, max_length=200, min_length = 50, do_sample=False)[0]['generated_text']
+    answer = qa_pipeline(input_text,max_length = 100, do_sample=False)[0]['generated_text']
     
     return answer
 
@@ -258,5 +270,9 @@ def create_article_pdf(question, image_path, caption, output_pdf_path):
 
 # Main usage
 question = "How has the use of sign language evolved over the years?"
-pdf_path = os.path.join(current_dir, "Article", 'article.pdf') 
+# Prompt the user for the desired file name
+pdf_filename = input("Enter the desired PDF file name (without extension): ")
+# Create the full path to save the PDF in the article folder
+pdf_path = os.path.join(current_dir, "Article", f"{pdf_filename}.pdf")
 create_article_pdf(question, image_path, caption, pdf_path)
+print(f"PDF saved as {pdf_path}")

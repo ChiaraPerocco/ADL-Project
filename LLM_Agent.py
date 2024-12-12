@@ -23,55 +23,91 @@ if False:
     from transformers import pipeline
 
 # https://medium.com/@aydinKerem/what-is-an-llm-agent-and-how-does-it-work-1d4d9e4381ca
+#https://huggingface.co/blog/open-source-llms-as-agents
+
+import getpass
+import os
+
+# API Key Hugging Face
+access_token = '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'
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = getpass.getpass(access_token)
+# %pip install --upgrade --quiet  langchain-huggingface text-generation transformers google-search-results numexpr langchainhub sentencepiece jinja2 bitsandbytes accelerate
+# pip install transformers huggingface_hub
 
 
-from langchain_community.llms import HuggingFaceEndpoint
-from langchain_community.chat_models.huggingface import ChatHuggingFace
-
-llm = HuggingFaceEndpoint(repo_id="HuggingFaceH4/zephyr-7b-beta")
-
-chat_model = ChatHuggingFace(llm=llm)
-
-
-from langchain import hub
+import os
 from langchain.agents import AgentExecutor, load_tools
 from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.agents.output_parsers import (
-    ReActJsonSingleInputOutputParser,
-)
-from langchain.tools.render import render_text_description
+from langchain.agents.output_parsers import ReActJsonSingleInputOutputParser
+from langchain.agents import initialize_agent
+from langchain.agents import Tool
 from langchain_community.utilities import SerpAPIWrapper
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import PromptTemplate
+from langchain_community.tools import LLMMathTool
+from huggingface_hub import login
+import requests
+import wikipedia # pip install wikipedia
+from langchain.agents import AgentExecutor, load_tools
+from langchain.agents.format_scratchpad import format_log_to_str
+from langchain.agents.output_parsers import ReActJsonSingleInputOutputParser
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import PromptTemplate
+from langchain.tools import Tool
+from langchain_community.tools import LLMMathTool
 
-# setup tools
-tools = load_tools(["serpapi", "llm-math"], llm=llm)
+# 1. Set up Hugging Face API token for authentication
+login(token=access_token)
 
-# setup ReAct style prompt
-prompt = hub.pull("hwchase17/react-json")
-prompt = prompt.partial(
-    tools=render_text_description(tools),
-    tool_names=", ".join([t.name for t in tools]),
+# 1. Initialize your LLM (Hugging Face model like GPT-3, GPT-2, etc.)
+chat_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
+
+# 2. Setup DuckDuckGo Web Search Tool (using HTTP requests to DuckDuckGo API)
+def duckduckgo_search(query):
+    url = f"https://api.duckduckgo.com/?q={query}&format=json"
+    response = requests.get(url)
+    data = response.json()
+    return data.get("AbstractText", "No relevant information found.")
+
+# 3. Setup Wikipedia Search Tool (using Wikipedia package)
+def wikipedia_search(query):
+    try:
+        # Search Wikipedia and return a summary
+        summary = wikipedia.summary(query, sentences=2)
+        return summary
+    except wikipedia.exceptions.DisambiguationError as e:
+        return f"Multiple results found: {e.options}"
+    except wikipedia.exceptions.HTTPTimeoutError:
+        return "Wikipedia request timed out."
+
+# 4. Setup LLM Math Tool for Math-related queries
+llm_math_tool = LLMMathTool()
+
+tools = [
+    Tool(name="duckduckgo", func=duckduckgo_search, description="Searches the web using DuckDuckGo"),
+    Tool(name="wikipedia", func=wikipedia_search, description="Fetches a summary from Wikipedia"),
+    Tool(name="llm-math", func=llm_math_tool.run, description="Performs mathematical operations")
+]
+
+# 5. Define the ReAct-style prompt
+prompt = PromptTemplate(
+    input_variables=["tools", "tool_names"],
+    template="You are an agent that can use tools. Tools available: {tool_names}. Respond based on the following input."
 )
 
-# define the agent
-chat_model_with_stop = chat_model.bind(stop=["\nObservation"])
-agent = (
-    {
-        "input": lambda x: x["input"],
-        "agent_scratchpad": lambda x: format_log_to_str(x["intermediate_steps"]),
-    }
-    | prompt
-    | chat_model_with_stop
-    | ReActJsonSingleInputOutputParser()
-)
+# 6. Set up agent executor
+agent = AgentExecutor(agent=chat_model, tools=tools, verbose=True)
 
-# instantiate AgentExecutor
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+# 7. Example function to run the agent
+def run_agent(input_text):
+    result = agent.invoke({"input": input_text})
+    return result
 
-agent_executor.invoke(
-    {
-        "input": "Who is the current holder of the speed skating world record on 500 meters? What is her current age raised to the 0.43 power?"
-    }
-)
+# 8. Test the agent with a query
+query = "Who is the current holder of the speed skating world record on 500 meters? What is her current age raised to the 0.43 power?"
+response = run_agent(query)
+print(response)
 
 
 #git clone https://github.com/ggerganov/llama.cpp.git
