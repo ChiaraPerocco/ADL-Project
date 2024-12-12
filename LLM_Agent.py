@@ -1,113 +1,209 @@
-if False:
-    import os
-    from transformers import BlipProcessor, BlipForConditionalGeneration
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
-    from PIL import Image
-    from langchain_community.tools import DuckDuckGoSearchRun
-    #from langchain_openai import ChatOpenAI
-    from transformers import pipeline
-    from langchain.prompts import PromptTemplate
-    from langchain.agents import initialize_agent, Tool, AgentType
-    from langchain.agents import AgentExecutor
-    from langchain.chains import LLMChain
-    from textwrap import wrap
-    from diffusers import DiffusionPipeline
-    from langchain_community.llms import HuggingFacePipeline
-    #pip install -U langchain-community
-    from langchain.agents import Tool, initialize_agent, AgentType
-    from langchain.chains import LLMChain
-    from langchain.prompts import PromptTemplate
-    #from langchain.utilities import DuckDuckGoSearchRun
-    from langchain.llms import HuggingFacePipeline
-    from transformers import pipeline
-
+###################################################################################################
+#
+# LLM using agent
 # https://medium.com/@aydinKerem/what-is-an-llm-agent-and-how-does-it-work-1d4d9e4381ca
-#https://huggingface.co/blog/open-source-llms-as-agents
-
-import getpass
-import os
-
-# API Key Hugging Face
-access_token = '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'
-
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = getpass.getpass(access_token)
+# https://huggingface.co/blog/open-source-llms-as-agents
+#
+###################################################################################################
+# Installation
+#import getpass
+#os.environ["HUGGINGFACEHUB_API_TOKEN"] = getpass.getpass(access_token)
 # %pip install --upgrade --quiet  langchain-huggingface text-generation transformers google-search-results numexpr langchainhub sentencepiece jinja2 bitsandbytes accelerate
 # pip install transformers huggingface_hub
 
-
+# Import packages
 import os
-from langchain.agents import AgentExecutor, load_tools
-from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.agents.output_parsers import ReActJsonSingleInputOutputParser
-from langchain.agents import initialize_agent
+from langchain.agents import AgentExecutor
 from langchain.agents import Tool
-from langchain_community.utilities import SerpAPIWrapper
-from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
-from langchain_community.tools import LLMMathTool
 from huggingface_hub import login
 import requests
 import wikipedia # pip install wikipedia
-from langchain.agents import AgentExecutor, load_tools
-from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.agents.output_parsers import ReActJsonSingleInputOutputParser
-from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.tools import Tool
-from langchain_community.tools import LLMMathTool
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from langchain_community.tools import DuckDuckGoSearchRun
 
-# 1. Set up Hugging Face API token for authentication
+from langchain.agents import initialize_agent, AgentExecutor, Tool
+from langchain.prompts import PromptTemplate
+from langchain.llms import HuggingFacePipeline
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
+import requests
+
+# API Key Hugging Face
+access_token = "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"
+
+# Hugging Face API token for authentication
 login(token=access_token)
 
-# 1. Initialize your LLM (Hugging Face model like GPT-3, GPT-2, etc.)
-chat_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
+from langchain_community.llms import HuggingFaceEndpoint
+from langchain_community.chat_models.huggingface import ChatHuggingFace
 
-# 2. Setup DuckDuckGo Web Search Tool (using HTTP requests to DuckDuckGo API)
-def duckduckgo_search(query):
-    url = f"https://api.duckduckgo.com/?q={query}&format=json"
-    response = requests.get(url)
-    data = response.json()
-    return data.get("AbstractText", "No relevant information found.")
+llm = HuggingFaceEndpoint(repo_id="HuggingFaceH4/zephyr-7b-beta")
 
-# 3. Setup Wikipedia Search Tool (using Wikipedia package)
-def wikipedia_search(query):
-    try:
-        # Search Wikipedia and return a summary
-        summary = wikipedia.summary(query, sentences=2)
-        return summary
-    except wikipedia.exceptions.DisambiguationError as e:
-        return f"Multiple results found: {e.options}"
-    except wikipedia.exceptions.HTTPTimeoutError:
-        return "Wikipedia request timed out."
+chat_model = ChatHuggingFace(llm=llm)
 
-# 4. Setup LLM Math Tool for Math-related queries
-llm_math_tool = LLMMathTool()
+from langchain import hub
+from langchain.agents import AgentExecutor, load_tools
+from langchain.agents.format_scratchpad import format_log_to_str
+from langchain.agents.output_parsers import (
+    ReActJsonSingleInputOutputParser,
+)
+from langchain.tools.render import render_text_description
+from langchain_community.tools import DuckDuckGoSearchRun
 
+# Initialize DuckDuckGo search tool
+search = DuckDuckGoSearchRun()
+import wikipedia  # Import Wikipedia library
+# setup tools
 tools = [
-    Tool(name="duckduckgo", func=duckduckgo_search, description="Searches the web using DuckDuckGo"),
-    Tool(name="wikipedia", func=wikipedia_search, description="Fetches a summary from Wikipedia"),
-    Tool(name="llm-math", func=llm_math_tool.run, description="Performs mathematical operations")
+    search  # DuckDuckGo tool for web search
 ]
 
-# 5. Define the ReAct-style prompt
-prompt = PromptTemplate(
-    input_variables=["tools", "tool_names"],
-    template="You are an agent that can use tools. Tools available: {tool_names}. Respond based on the following input."
+# Setup des ReAct-Style-Prompts
+prompt = hub.pull("hwchase17/react-json")
+prompt = prompt.partial(
+    tools=render_text_description(tools),
+    tool_names=", ".join([t.name for t in tools]),
 )
 
-# 6. Set up agent executor
-agent = AgentExecutor(agent=chat_model, tools=tools, verbose=True)
+# Definition des Agenten
+chat_model_with_stop = chat_model.bind(stop=["\nObservation"])
+agent = (
+    {
+        "input": lambda x: x["input"],
+        "agent_scratchpad": lambda x: format_log_to_str(x["intermediate_steps"]),
+    }
+    | prompt
+    | chat_model_with_stop
+    | ReActJsonSingleInputOutputParser()
+)
 
-# 7. Example function to run the agent
-def run_agent(input_text):
-    result = agent.invoke({"input": input_text})
-    return result
+# Instanziieren des AgentExecutor
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
 
-# 8. Test the agent with a query
-query = "Who is the current holder of the speed skating world record on 500 meters? What is her current age raised to the 0.43 power?"
-response = run_agent(query)
-print(response)
+# Anfrage zum Thema "Gebärdensprache" und Generierung eines strukturierten Textes
+response = agent_executor.invoke(
+    {
+        "input": "Please create a detailed essay on the topic of Sign Language. The essay should have at least 1000 words and consist of 4 paragraphs, each building upon the previous one. The essay should cover the following aspects:\n"
+                  "1. An introduction to sign language and its importance in communication.\n"
+                  "2. The history and development of sign language.\n"
+                  "3. The role of sign language in society, especially in education and inclusivity.\n"
+                  "4. The future of sign language, technology's impact, and global awareness."
+    }
+)
+
+import os
+from fpdf import FPDF  # pip install fpdf
+
+# Erstelle ein FPDF-Objekt
+pdf = FPDF()
+
+# Füge eine Seite hinzu
+pdf.add_page()
+
+# Setze die Schriftart
+pdf.set_font("Arial", size=12)
+
+# Angenommen, response ist ein Dictionary, das den Text unter einem bestimmten Schlüssel enthält
+# Zum Beispiel: response = {"output": "Hier steht der generierte Text zum Thema Gebärdensprache..."}
+
+# Schreibe den extrahierten Text in die PDF
+pdf.multi_cell(0, 10, response['output'])
+
+current_dir = os.path.dirname(__file__)
+pdf_filename = input("Enter the desired PDF file name (without extension): ")
+pdf.output(os.path.join(current_dir, "Article", f"{pdf_filename}.pdf"))
+
+print("PDF wurde erfolgreich erstellt!")
+
+
+
+if False:
+    # Initialize LLM (Hugging Face model like GPT-3, GPT-2, etc.)
+    # Load model directly
+    chat_model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-xxl")
+
+    # DuckDuckGo Web Search Tool (using HTTP requests to DuckDuckGo API)
+    #def duckduckgo_search(query):
+    #    url = f"https://api.duckduckgo.com/?q={query}&format=json"
+    #    response = requests.get(url)
+    #    data = response.json()
+    #    #return data.get("AbstractText", "No relevant information found.")
+
+    # Wikipedia Search Tool (using Wikipedia package)
+    #def wikipedia_search(query):
+    #    try:
+    #        # Search Wikipedia and return a summary
+    #        summary = wikipedia.summary(query, sentences=2)
+    #        return summary
+    #    except wikipedia.exceptions.DisambiguationError as e:
+    #        return f"Multiple results found: {e.options}"
+    #    except wikipedia.exceptions.HTTPTimeoutError:
+    #        return "Wikipedia request timed out."
+
+    # Tools
+    #tools = [
+    #    Tool(name="duckduckgo", func=duckduckgo_search, description="Searches the web using DuckDuckGo"),
+    #    #Tool(name="wikipedia", func=wikipedia_search, description="Fetches a summary from Wikipedia"),
+    #    #Tool(name="llm-math", func=llm_math_tool.run, description="Performs mathematical operations")
+    #]
+    ddg_search = DuckDuckGoSearchRun()
+    tools = [ddg_search]
+
+    # Define the ReAct-style prompt
+    prompt = PromptTemplate(
+        input_variables=["tools", "tool_names"],
+        template="You are an agent that can use tools. Tools available: {tool_names}. Respond based on the following input."
+    )
+
+    # Set up agent executor
+    agent = AgentExecutor(agent=chat_model, tools=tools, verbose=True)
+
+    # Function to run the agent
+    def run_agent(input_text):
+        result = agent.invoke({"input": input_text})
+        return result
+
+    # Test agent with a query
+    query = "Who is the current holder of the speed skating world record on 500 meters? What is her current age raised to the 0.43 power?"
+    response = run_agent(query)
+    print(response)
+
+    from langchain.agents import AgentExecutor
+    from langchain.tools import DuckDuckGoSearchResults
+    from langchain.llms import HuggingFacePipeline
+    from transformers import pipeline
+
+    # Erstelle die HuggingFacePipeline
+    model_name = "google/flan-t5-large"
+    pipe = pipeline("text2text-generation", model=model_name)
+
+    # LLM-Initialisierung
+    llm = HuggingFacePipeline(pipeline=pipe)
+
+    # DuckDuckGo-Suchwerkzeug einrichten
+    ddg_search = DuckDuckGoSearchResults()
+
+    tools = [ddg_search]
+
+    # Agent Executor mit Fehlerbehandlung
+    agent = AgentExecutor(
+        agent=llm, 
+        tools=tools, 
+        verbose=True,
+        handle_parsing_errors=True  # Fehlerbehandlung aktivieren
+    )
+
+    # Funktion zum Ausführen des Agenten
+    def run_agent(input_text):
+        result = agent.invoke({"input": input_text})
+        return result
+
+    # Testanfrage
+    query = "Who is the current holder of the speed skating world record on 500 meters?"
+    response = run_agent(query)
+    print(response)
 
 
 #git clone https://github.com/ggerganov/llama.cpp.git

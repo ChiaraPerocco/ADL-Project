@@ -22,9 +22,9 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "facial_emotion_dataset", "train")
-dataset_val = os.path.join(current_dir, "facial_emotion_dataset", "val")
-dataset_test = os.path.join(current_dir, "facial_emotion_dataset", "test")
+dataset_train = os.path.join(current_dir, "Sign Language", "train")
+dataset_val = os.path.join(current_dir, "Sign Language", "val")
+dataset_test = os.path.join(current_dir, "Sign Language", "test")
 # Device-Konfiguration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -251,8 +251,8 @@ if False:
 def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
-    num_epochs = trial.suggest_int('num_epochs', 1, 50)
+    batch_size = trial.suggest_categorical('batch_size', [64])
+    num_epochs = trial.suggest_int('num_epochs', 1, 100)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -322,7 +322,7 @@ def objective(trial):
 
 # Run the Optuna study
 study = optuna.create_study(direction="maximize") # is it minimize or maximize
-study.optimize(objective, n_trials=20)
+study.optimize(objective, n_trials=1)
 
 # Print the best hyperparameters
 best_params = study.best_params
