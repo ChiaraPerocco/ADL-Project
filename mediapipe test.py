@@ -73,5 +73,3 @@ for subfolder in os.listdir(input_folder):
                 processed_output_path = os.path.join(target_subfolder, f"processed_{image_name}")
                 cv2.imwrite(original_output_path, image)  # Original speichern
                 cv2.imwrite(processed_output_path, output_image)  # Bearbeitetes Bild speichern
-
-print("Verarbeitung abgeschlossen!")
