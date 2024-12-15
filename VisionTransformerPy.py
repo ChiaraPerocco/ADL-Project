@@ -27,7 +27,7 @@ from torchvision.utils import save_image
 #from torchcam.methods import SmoothGradCAMpp
 #from torchcam.utils import overlay_mask
 import matplotlib.pyplot as plt
-from Augmentation import AugmentHandFocus
+#from Augmentation import AugmentHandFocus
 
 import os
 
@@ -36,9 +36,9 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # Relativen Pfad zum Zielordner setzen
-dataset_train = os.path.join(current_dir, "Sign Language", "train")
-dataset_val = os.path.join(current_dir, "Sign Language", "val")
-dataset_test = os.path.join(current_dir, "Sign Language", "test")
+dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
+dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
+dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 
 num_classes = 26
 
@@ -46,17 +46,17 @@ num_classes = 26
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 # Der Ordner, in dem die augmentierten Bilder gespeichert werden sollen
-save_augmented_dir = os.path.join(current_dir, "Augmentation Images")
+#save_augmented_dir = os.path.join(current_dir, "Augmentation Images")
 
 # Erstelle den Ordner, falls er nicht existiert
-os.makedirs(save_augmented_dir, exist_ok=True)
+#os.makedirs(save_augmented_dir, exist_ok=True)
 
 
 def get_train_valid_loader(data_dir_train, 
                            data_dir_valid,
                            batch_size, 
                            augment, 
-                           save_augmented_dir,  # Optionaler Parameter für die Speicherung
+                           #save_augmented_dir,  # Optionaler Parameter für die Speicherung
                            shuffle=True):
     normalize = transforms.Normalize(
         mean=[0.4914, 0.4822, 0.4465],
@@ -137,7 +137,7 @@ def get_test_loader(data_dir,
 # https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 def objective(trial):
     # Suggest hyperparameters
-    learning_rate = trial.suggest_float('learning_rate', 0.0008, 0.0008, log=True)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [64])
     num_epochs = trial.suggest_int('num_epochs', 10, 10)
 
@@ -147,7 +147,7 @@ def objective(trial):
         data_dir_valid=dataset_val,
         batch_size=batch_size,
         augment=True,
-        save_augmented_dir=save_augmented_dir,
+        #save_augmented_dir=save_augmented_dir,
         shuffle=True
     )
     # DataLoader
@@ -238,7 +238,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         data_dir_train=dataset_train,
         data_dir_valid=dataset_val,
         batch_size=batch_size,
-        save_augmented_dir=save_augmented_dir,
+        #save_augmented_dir=save_augmented_dir,
         augment=True,
         shuffle=True
     )
@@ -338,7 +338,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     # Create the folder if it doesn't exist
     os.makedirs(eval_folder_path, exist_ok=True)    # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values_dataset2.pth"))
 
     return model
 
@@ -400,7 +400,7 @@ if False:
     # test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'ViT_model_1.pth')
+torch.save(final_model, 'ViT_model_dataset2.pth')
 ###################################################################################################
 #
 # Saliency Maps with Grad-CAM
@@ -575,7 +575,7 @@ from torchvision import datasets, utils, models
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = os.path.join(current_dir, "Sign Language", "test")
+dataset = os.path.join(current_dir, "Sign Language", "test_processed")
 
 unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
@@ -597,7 +597,7 @@ def compute_saliency_and_save():
 #if __name__ == "__main__":
 # Create folder to saliency maps
 #save_path = PATH + 'results/'
-save_path = os.path.join(current_dir, "Saliency Maps", "results")
+save_path = os.path.join(current_dir, "Saliency Maps", "results_ViT_Dataset2")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')

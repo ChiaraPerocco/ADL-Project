@@ -25,9 +25,9 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "Sign Language", "train")
-dataset_val = os.path.join(current_dir, "Sign Language", "val")
-dataset_test = os.path.join(current_dir, "Sign Language", "test")
+dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
+dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
+dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 
 # Number of classes in data set
 num_classes = 26
@@ -110,7 +110,7 @@ def get_test_loader(data_dir,
 # https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 def objective(trial):
     # Suggest hyperparameters
-    learning_rate = trial.suggest_float('learning_rate', 0.0008, 0.0008, log=True)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [64])
     num_epochs = trial.suggest_int('num_epochs', 10, 10)
 
@@ -308,7 +308,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     os.makedirs(eval_folder_path, exist_ok=True)
     
     # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2.pth"))
 
 
     return model
@@ -372,7 +372,7 @@ def test_model(model, test_loader):
 test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'resnet50_model.pth')
+torch.save(final_model, 'resnet50_model_dataset2.pth')
 
 ###################################################################################################
 #
@@ -542,7 +542,7 @@ from torchvision import datasets, utils, models
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = os.path.join(current_dir, "Sign Language", "test")
+dataset = os.path.join(current_dir, "Sign Language", "test_processed")
 
 unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
@@ -563,7 +563,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results_resnet")
+save_path = os.path.join(current_dir, "Saliency Maps", "results_resnet_dataset2")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
