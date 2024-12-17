@@ -1,133 +1,64 @@
-if False: 
-   # Import packages
-    import os
-    os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
-
-    #from langchain.agents import AgentExecutor, load_tools
-    from huggingface_hub import login
-    #from langchain.agents import initialize_agent, AgentExecutor, Tool
-    #from langchain.prompts import PromptTemplate
-    #from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
-    #import requests
-
-    # API Key Hugging Face
-    access_token = "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"
-
-    # Hugging Face API token for authentication
-    login(token=access_token)
-
-    #https://medium.com/@aqdasansari2024/level-up-your-llm-application-using-langchain-agents-688bc7fa7988
-    #https://medium.com/@mehulpratapsingh/langchain-agents-for-noobs-a-complete-practical-guide-e231b6c71a4a
-    from langchain_huggingface.llms import HuggingFacePipeline
-    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-    from langchain_community.utilities import WikipediaAPIWrapper  # Explicitly importing the Wikipedia tool
-    from langchain.agents import initialize_agent
-    from langchain.tools import Tool
-    from langchain.agents import AgentType
-
-        # Configure logging
-        #logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-        #logger = logging.getLogger(__name__)
-
-    # Use a more capable model for better results
-    model_id = "EleutherAI/gpt-neo-2.7B"  # Use a larger model if feasible
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id)
-
-    # Set up the pipeline for text generation
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=1500, temperature=0.7)
-    llm = HuggingFacePipeline(pipeline=pipe)
-
-    # Initialize the Wikipedia tool manually
-    wikipedia_tool = WikipediaAPIWrapper()
-
-    # Create the list of tools (only using the Wikipedia tool here for example)
-    tools = [Tool(name="Wikipedia", func=wikipedia_tool.run, description="google search")]
-
-    # Initialize the agent with appropriate configurations
-    agent_executor = initialize_agent(
-        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        tools=tools,
-        llm=llm,
-        verbose=True,
-        max_iteration = 3
-        # handle_parsing_errors=True  # Enable error handling for parsing errors
-    )
-
-
-    prompt = (
-            "Please create a detailed essay on the topic of Sign Language. The essay should have at least 1000 words, "
-            "divided into four paragraphs. Each paragraph should build upon the previous one and address the following aspects:\n\n"
-            "1. An introduction to sign language and its importance in communication.\n"
-            "2. The history and development of sign language.\n"
-            "3. The role of sign language in society, particularly in education and inclusivity.\n"
-            "4. The future of sign language, including technology's impact and global awareness.\n\n"
-            "Ensure the essay is engaging, informative, and follows a logical flow."
-    )
-
-    # Invoke the agent to generate the essay
-    result = agent_executor.invoke("Wo is the founder of google?")
-    print(result)
-
-if False:
-
-    # Import packages
-    import os
-    os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
-
-    #from langchain.agents import AgentExecutor, load_tools
-    from huggingface_hub import login
-
-
-    # API Key Hugging Face
-    access_token = "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"
-
-    # Hugging Face API token for authentication
-    login(token=access_token)
-
-        #https://medium.com/@aqdasansari2024/level-up-your-llm-application-using-langchain-agents-688bc7fa7988
-        #https://medium.com/@mehulpratapsingh/langchain-agents-for-noobs-a-complete-practical-guide-e231b6c71a4a
-    from langchain_huggingface.llms import HuggingFacePipeline
-    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-    from langchain_community.utilities import WikipediaAPIWrapper  # Explicitly importing the Wikipedia tool
-    from langchain.agents import initialize_agent
-    from langchain.tools import Tool
-    from langchain.agents import AgentType
-
-            # Configure logging
-            #logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-            #logger = logging.getLogger(__name__)
-
-    # Use a more capable model for better results
-    model_id = "gpt2"  # Use a larger model if feasible
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id)
-
-
-    # Create a pipeline for text generation
-    generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
-
-    # Generate some text
-    input_text = "Text about sign language"
-    generated_text = generator(input_text, max_length=1500,min_length =1000, num_return_sequences=1)
-
-    # Print the generated text
-    print(generated_text[0]['generated_text'])
-
 ###################################################################################################
 #
-# Crate llm with agent from: https://cookbook.openai.com/examples/how_to_build_a_tool-using_agent_with_langchain
+# Create Diffusion Model
 #
 ###################################################################################################
+from diffusers import DiffusionPipeline
+import torch
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
 
+# Get the path of current_dir
+current_dir = os.path.dirname(__file__)
+
+# Load the pipeline
+#pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", torch_dtype=torch.float16)
+pipeline = DiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", torch_dtype=torch.float16)
+#pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+
+# Prompt user for desired image name
+#image_filename = input("Enter the desired base name for your images (e.g., article_image): ")
+
+
+# Define the prompts for variety
+prompts = [
+    #"An image about the history of sign language",
+    #"An image about the importance of sign language",
+    #"An image about education of sign language",
+    #"An image about the future of sign language"
+
+    "An image of a squirrel in Picasso style",
+    "A squirrel in a surreal landscape with vibrant colors",
+    "A squirrel in the style of abstract expressionism",
+    "A whimsical painting of a squirrel with geometric shapes"
+]
+
+# Generate and save 4 different images
+for i, prompt in enumerate(prompts, 1):
+    image = pipeline(prompt).images[0]  # Generate the image
+    
+    # Create a unique filename for each image
+    #image_path = os.path.join(current_dir, "DiffusionModelOutput", f"{image_filename}_{i}.png")
+    image_path = os.path.join(current_dir, "DiffusionModelOutput", f"article_image_{i}.png")
+
+    # Save the image
+    image.save(image_path)
+    print(f"Image {i} saved as {image_path}")
+
+
+###################################################################################################
+#
+# Crate llm with agent
+# https://cookbook.openai.com/examples/how_to_build_a_tool-using_agent_with_langchain
+#
+###################################################################################################
 import re
 from typing import List, Union
+import torch
 
 # Langchain imports
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
-from langchain.prompts import BaseChatPromptTemplate, ChatPromptTemplate
+from langchain.prompts import BaseChatPromptTemplate
 #from langchain import SerpAPIWrapper, LLMChain
 from langchain.chains import LLMChain
 from langchain_community.utilities import WikipediaAPIWrapper  # Explicitly importing the Wikipedia tool
@@ -136,24 +67,14 @@ from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessa
 # Hugging face imports
 from huggingface_hub import login
 from langchain_huggingface.llms import HuggingFacePipeline
-#from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from transformers import pipeline
 
 # API Key Hugging Face
-#access_token = "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"
+access_token = "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"
 
 # Hugging Face API token for authentication
-#login(token=access_token)
-
-# Initiate open-source LLM from Hugging Face
-#llm_pipeline = pipeline("text-generation", model="facebook/opt-6.7b", device=-1)  # Adjust for your specific model
-llm_pipeline = pipeline("text-generation", model="gpt2", device=-1)  # Adjust for your specific model
-
-def llm_open_source(query: str):
-    """Wrapper to interface with the open-source LLM pipeline."""
-    result = llm_pipeline(query, max_length=500, do_sample=True)
-    return result[0]['generated_text']
-
+login(token=access_token)
 
 # Initialize the Wikipedia tool manually
 wikipedia_tool = WikipediaAPIWrapper()
@@ -161,27 +82,65 @@ wikipedia_tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
 
 # Create the tools (only using the Wikipedia tool here for example)
 tools = [Tool(name="Wikipedia", func=wikipedia_tool.run, description="Search Wikipedia for information")]
+print(wikipedia_tool.run("History of sign language"))
 
 # Set up the prompt with input variables for tools, user input and a scratchpad for the model to record its workings
-template = """Answer the following questions as best you can, but speaking as a pirate might speak. You have access to the following tools:
+template_kopie = """Answer the following questions in a structured format. You can use the following tool:
 
 {tools}
 
-Use the following format:
+Your task is to write a detailed, well-organized response of approximately 500 words about the topic of sign language. Structure your response into four paragraphs, with each paragraph focusing on a specific aspect of sign language:
 
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action
-Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+1. **History**: Provide an overview of the origins and historical development of sign language.
+2. **Importance**: Explain why sign language is essential for communication and inclusivity, and its impact on the Deaf community.
+3. **Applications**: Discuss how sign language is used in education, technology, and everyday life.
+4. **Future**: Explore potential advancements and future trends in the use of sign language.
 
-Begin! Remember to speak as a pirate when giving your final answer. Use lots of "Arg"s
+To answer, follow this format:
+
+Question: {input}
+Action: <the tool you want to use>
+Action Input: <the input for the tool>
+Observation: <the tool's output>
+... (repeat Action/Action Input/Observation as needed)
+Final Answer: <your final answer here, structured as described above>
+
+Begin!
 
 Question: {input}
 {agent_scratchpad}"""
+
+template = """
+You are tasked with answering a question using the tools provided. Your goal is to write a cohesive article structured into four paragraphs, covering:
+
+1. **History**: Provide an overview of the origins and historical development of sign language.
+2. **Importance**: Explain why sign language is essential for communication and inclusivity, and its impact on the Deaf community.
+3. **Applications**: Discuss how sign language is used in education, technology, and everyday life.
+4. **Future**: Explore potential advancements and future trends in the use of sign language.
+
+Follow this process:
+
+1. Use tools to gather relevant information.
+2. Write a cohesive article based on the observations.
+
+### Response Format:
+
+Question: {input}
+
+Step 1: Use tools to gather information.
+Action: <Tool Name>
+Action Input: <Query>
+Observation: <Tool's Response>
+...(Repeat as necessary)...
+
+Step 2: Write the article.
+Final Answer: <Cohesive article structured as described.>
+
+Begin:
+
+Question: {input}
+{agent_scratchpad}
+"""
 
 # Set up a prompt template
 class CustomPromptTemplate(BaseChatPromptTemplate):
@@ -221,55 +180,57 @@ prompt = CustomPromptTemplate(
 
 
 class CustomOutputParser(AgentOutputParser):
-    
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
-        
-        # Check if agent should finish
-        if "Final Answer:" in llm_output:
+        try:
+            # Check for "Final Answer"
+            if "Final Answer:" in llm_output:
+                return AgentFinish(
+                    return_values={"output": llm_output.split("Final Answer:")[-1].strip()},
+                    log=llm_output,
+                )
+
+            # Parse for Action and Action Input
+            regex = r"Action: (.*?)[\n]*Action Input:[\s]*(.*)"
+            match = re.search(regex, llm_output, re.DOTALL)
+
+            if not match:
+                raise ValueError(f"Could not parse LLM output: `{llm_output}`")
+
+            action = match.group(1).strip()
+            action_input = match.group(2)
+            return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
+
+        except Exception as e:
+            print(f"Error parsing LLM output: {e}")
+            # Fallback response
             return AgentFinish(
-                # Return values is generally always a dictionary with a single `output` key
-                # It is not recommended to try anything else at the moment :)
-                return_values={"output": llm_output.split("Final Answer:")[-1].strip()},
+                return_values={"output": "Unable to parse the output. Please refine your query."},
                 log=llm_output,
             )
-        
-        # Parse out the action and action input
-        regex = r"Action: (.*?)[\n]*Action Input:[\s]*(.*)"
-        match = re.search(regex, llm_output, re.DOTALL)
-        
-        # If it can't parse the output it raises an error
-        # You can add your own logic here to handle errors in a different way i.e. pass to a human, give a canned response
-        if not match:
-            raise ValueError(f"Could not parse LLM output: `{llm_output}`")
-        action = match.group(1).strip()
-        action_input = match.group(2)
-        
-        # Return the action and action input
-        return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
-    
+
 output_parser = CustomOutputParser()
 
 
 # Initiate our LLM
-#model_id = "gpt2"  # Use a larger model if feasible
-#tokenizer = AutoTokenizer.from_pretrained(model_id)
-#model = AutoModelForCausalLM.from_pretrained(model_id)
+# Load opensource llm and its tokenizer
+model_id = "openai-community/gpt2-large"
+#model_id = "HuggingFaceH4/zephyr-7b-beta"
+#device = "cuda" if torch.cuda.is_available() else "cpu"
+
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(model_id)
+
+# Maximale Token-Länge abrufen
+max_tokens = model.config.max_position_embeddings
+
 
 # Set up the pipeline for text generation
-#pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=1500, temperature=0.7)
-#llm = HuggingFacePipeline(pipeline=pipe)
+pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=500, pad_token_id=tokenizer.eos_token_id)
+llm = HuggingFacePipeline(pipeline=pipe)
 
 
 # LLM chain consisting of the LLM and a prompt
-#llm_chain = LLMChain(llm=llm, prompt=prompt)
-
-
-# Define LLM Chain
-def llm_chain_fn(prompt: str):
-    """Wrapper to interface with the open-source LLM for LangChain."""
-    return llm_open_source(prompt)
-
-llm_chain = LLMChain(llm=llm_chain_fn, prompt=prompt)
+llm_chain = LLMChain(llm=llm, prompt=prompt, verbose = True)
 
 
 # Using tools, the LLM chain and output_parser to make an agent
@@ -288,5 +249,101 @@ agent = LLMSingleActionAgent(
 # Set verbose=True to share the CoT reasoning the LLM goes through
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
-response = agent_executor.invoke("How many people live in canada as of 2023?")
+response = agent_executor.invoke("What is the history of sign language?", intermediate_steps=[])
 print(response)
+
+final_response = response["output"]  # Extract the final response
+#print("Final Response:", final_response)
+
+answer = final_response
+# Use a regex to capture everything after "Answer:"
+match = re.search(r"Answer:(.*)", final_response, re.DOTALL)
+
+if match:
+    # Extract the part after "Answer:"
+    answer = match.group(1).strip()  # .strip() to remove leading/trailing whitespace
+
+    # Ensure the answer is in string format
+    if isinstance(answer, str):
+        print("Answer is a string:")
+        print(answer)
+    else:
+        print("Answer is not a string. Converting to string.")
+        answer = str(answer)  # Convert to string if needed
+        print(answer)
+else:
+    print("No answer found.")
+
+from fpdf import FPDF  # pip install fpdf
+
+
+# Create the article in pdf format
+from fpdf import FPDF
+
+# Initialisiere das PDF
+class PDF(FPDF):
+    def __init__(self):
+        super().__init__()
+        self.set_auto_page_break(auto=True, margin=15)
+        self.add_page()
+        self.set_font("Arial", size=12)
+
+    # Textabschnitt mit Bild hinzufügen
+    def add_paragraph_with_image(self, paragraph, image_path):
+        # Text (Paragraph) hinzufügen
+        self.multi_cell(0, 10, paragraph)
+        self.ln()  # Abstand nach dem Text
+
+        # Bild hinzufügen
+        if image_path:
+            self.image(image_path, x=None, y=None, w=100)  # x=None, y=None platziert das Bild an der aktuellen Position
+            self.ln(10)  # Abstand nach dem Bild
+
+
+# Liste von Bildpfaden
+image_paths = [
+    os.path.join(current_dir, "DiffusionModelOutput", "article_image_1.png"),
+    os.path.join(current_dir, "DiffusionModelOutput", "article_image_2.png"),
+    os.path.join(current_dir, "DiffusionModelOutput", "article_image_3.png"),
+    os.path.join(current_dir, "DiffusionModelOutput", "article_image_4.png"),
+]
+
+# PDF erstellen
+pdf = PDF()
+
+# Text in Absätze aufteilen
+paragraphs = answer.strip().split("\n\n")  # Absätze erkennen anhand doppelter Zeilenumbrüche
+
+# Prüfen, ob genug Bilder vorhanden sind
+if len(paragraphs) > len(image_paths):
+    raise ValueError("Nicht genügend Bilder für die Absätze vorhanden!")
+
+# Absätze und Bilder hinzufügen
+for paragraph, image_path in zip(paragraphs, image_paths):
+    pdf.add_paragraph_with_image(paragraph.strip(), image_path)
+
+# PDF speichern
+pdf.output("output.pdf")
+
+"""
+# Erstelle ein FPDF-Objekt
+pdf = FPDF()
+
+# Füge eine Seite hinzu
+pdf.add_page()
+
+# Setze die Schriftart
+pdf.set_font("Arial", size=12)
+
+# Angenommen, response ist ein Dictionary, das den Text unter einem bestimmten Schlüssel enthält
+# Zum Beispiel: response = {"output": "Hier steht der generierte Text zum Thema Gebärdensprache..."}
+
+# Schreibe den extrahierten Text in die PDF
+pdf.multi_cell(0, 10, answer, align="c")
+
+current_dir = os.path.dirname(__file__)
+pdf_filename = input("Enter the desired PDF file name (without extension): ")
+pdf.output(os.path.join(current_dir, "Article", f"{pdf_filename}.pdf"))
+
+print("PDF wurde erfolgreich erstellt!")
+"""
