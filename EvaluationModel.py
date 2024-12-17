@@ -5,6 +5,7 @@
 ###################################################################################################
 ### Import packages
 import torch
+import torch.nn as nn
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -14,6 +15,7 @@ from sklearn.metrics import  confusion_matrix
 import seaborn as sns
 from sklearn.metrics import precision_recall_fscore_support
 import os
+#from AlexNet import AlexNet
 
 
 ### Import data set
@@ -24,19 +26,73 @@ print(current_dir)
 #dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 dataset_test = os.path.join(current_dir, "Sign Language", "test")
 
+# Load AlexNet class
+class AlexNet(nn.Module):
+    def __init__(self, num_classes=10):
+        super(AlexNet, self).__init__()
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=0),
+            nn.BatchNorm2d(96),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 3, stride = 2))
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(96, 256, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 3, stride = 2))
+        self.layer3 = nn.Sequential(
+            nn.Conv2d(256, 384, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(384),
+            nn.ReLU())
+        self.layer4 = nn.Sequential(
+            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(384),
+            nn.ReLU())
+        self.layer5 = nn.Sequential(
+            nn.Conv2d(384, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 3, stride = 2))
+        self.fc = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(6400, 4096),
+            nn.ReLU())
+        self.fc1 = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(4096, 4096),
+            nn.ReLU())
+        self.fc2= nn.Sequential(
+            nn.Linear(4096, num_classes))
+
+    def forward(self, x):
+        out = self.layer1(x)
+        print("Layer 1 Output Shape:", out.shape)
+        out = self.layer2(out)
+        print("Layer 2 Output Shape:", out.shape)
+        out = self.layer3(out)
+        print("Layer 3 Output Shape:", out.shape)
+        out = self.layer4(out)
+        print("Layer 4 Output Shape:", out.shape)
+        out = self.layer5(out)
+        print("Layer 5 Output Shape:", out.shape)
+        out = out.reshape(out.size(0), -1)
+        out = self.fc(out)
+        out = self.fc1(out)
+        out = self.fc2(out)
+        return out
+    
 ### Import the models
-#resnet50_model = torch.load('resnet50_model_dataset2.pth')
+resnet50_model = torch.load('resnet50_model_dataset2.pth')
 alexnet_model = torch.load('alexnet_model.pth')
-#ViT_model = torch.load('ViT_model_dataset2.pth')
+ViT_model = torch.load('ViT_model_dataset2.pth')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+print(device)
 ###################################################################################################
 #
 # Test model on resnet50 model
 #
 ###################################################################################################
-"""
 ### Import validation accuracy 
 resnet50_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2.pth"))
 # Retrieve saved variables
@@ -54,7 +110,6 @@ print(resnet50_train_loss)
 epochs = list(range(1, resnet50_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(resnet50_train_loss) == len(resnet50_val_loss) == len(resnet50_train_acc) == len(resnet50_val_acc))
-"""
 
 ###################################################################################################
 #
@@ -84,7 +139,6 @@ print(epochs)
 # Test model on Vision Transformer model
 #
 ###################################################################################################
-"""
 ### Import validation accuracy 
 ViT_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "ViT_values.pth"))
 # Retrieve saved variables
@@ -102,7 +156,6 @@ print(ViT_train_loss)
 epochs = list(range(1, ViT_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(ViT_train_loss) == len(ViT_val_loss) == len(ViT_train_acc) == len(ViT_val_acc))
-"""
 
 ###################################################################################################
 #
@@ -137,7 +190,7 @@ if True:
     # Load test data
     test_loader = get_test_loader(
         data_dir= dataset_test, # Pfad zu den Testdaten
-        batch_size=alexNet_params['batch_size']
+        batch_size=alexNet_hyper_params['batch_size']
     )
 
     # Test the model on the test data
@@ -190,7 +243,7 @@ if True:
 # Test model on ViT model
 #
 ###################################################################################################
-if False:
+if True:
     # get test loader
     def get_test_loader(data_dir,
                         batch_size,
@@ -273,7 +326,7 @@ if False:
 #
 ###################################################################################################
 # get test loader
-if False:
+if True:
     def get_test_loader(data_dir,
                         batch_size,
                         shuffle=True):
@@ -339,7 +392,6 @@ if False:
 ###################################################################################################
 ###Comparison of the classification methods in the testing stage
 ###################################################################################################
-"""
 # set width of bar 
 barWidth = 0.25
 fig = plt.subplots(figsize =(12, 8)) 
@@ -373,7 +425,6 @@ plt.legend()
 plt.show() 
 plt.clf()  # Löscht die Figur für den nächsten Plot
 
-"""
 
 ###################################################################################################
 ### Evaluation: ResNet50
@@ -593,4 +644,209 @@ if False:
     plt.show()
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
+
+
+
+###################################################################################################
+#
+# Saliency Maps with Grad-CAM
+# https://github.com/idiap/fullgrad-saliency/blob/26fb91b2f9ef616d15d080644b9f8a656a68204f/dump_images.py
+#
+###################################################################################################
+#
+# Copyright (c) 2019 Idiap Research Institute, http://www.idiap.ch/
+# Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
+#
+
+final_model = alexnet_model
+
+""" 
+    Implement GradCAM
+
+    Original Paper: 
+    Selvaraju, Ramprasaath R., et al. "Grad-cam: Visual explanations from deep networks 
+    via gradient-based localization." ICCV 2017.
+
+"""
+
+import torch.nn.functional as F
+from math import isclose
+
+class GradCAMExtractor:
+    #Extract tensors needed for Gradcam using hooks
+    
+    def __init__(self, model):
+        self.model = model
+
+        self.features = None
+        self.feat_grad = None
+
+        prev_module = None
+        self.target_module = None
+
+        # Iterate through layers
+        for m in self.model.modules():
+            if isinstance(m, nn.Conv2d):
+                prev_module = m
+            elif isinstance(m, nn.Linear):
+                self.target_module = prev_module
+                break
+
+        if self.target_module is not None:
+            # Register feature-gradient and feature hooks for each layer
+            handle_g = self.target_module.register_backward_hook(self._extract_layer_grads)
+            handle_f = self.target_module.register_forward_hook(self._extract_layer_features)
+
+    def _extract_layer_grads(self, module, in_grad, out_grad):
+        # function to collect the gradient outputs
+        self.feature_grads = out_grad[0]
+    
+    def _extract_layer_features(self, module, input, output):
+        # function to collect the layer outputs
+        self.features = output
+
+    def getFeaturesAndGrads(self, x, target_class):
+
+        out = self.model(x)
+
+        if target_class is None:
+            target_class = out.data.max(1, keepdim=True)[1]
+
+        output_scalar = -1. * F.nll_loss(out, target_class.flatten(), reduction='sum')
+
+        # Compute gradients
+        self.model.zero_grad()
+        output_scalar.backward()
+
+        return self.features, self.feature_grads
+
+
+class GradCAM():
+    """
+    Compute GradCAM 
+    """
+
+    def __init__(self, model):
+        self.model = model
+        self.model_ext = GradCAMExtractor(self.model)
+
+
+    def saliency(self, image, target_class=None):
+        #Simple FullGrad saliency
+        
+        self.model.eval()
+        features, intermed_grad = self.model_ext.getFeaturesAndGrads(image, target_class=target_class)
+
+        # GradCAM computation
+        grads = intermed_grad.mean(dim=(2,3), keepdim=True)
+        cam = (F.relu(features)* grads).sum(1, keepdim=True)
+        cam_resized = F.interpolate(F.relu(cam), size=image.size(2), mode='bilinear', align_corners=True)
+        return cam_resized
+
+
+######### misc function.py
+#
+# Copyright (c) 2019 Idiap Research Institute, http://www.idiap.ch/
+# Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
+#
+
+""" Misc helper functions """
+
+import cv2
+import subprocess
+import torchvision.transforms as transforms
+
+class NormalizeInverse(transforms.Normalize):
+    # Undo normalization on images
+
+    def __init__(self, mean, std):
+        mean = torch.as_tensor(mean)
+        std = torch.as_tensor(std)
+        std_inv = 1 / (std + 1e-7)
+        mean_inv = -mean * std_inv
+        super(NormalizeInverse, self).__init__(mean=mean_inv, std=std_inv)
+
+    def __call__(self, tensor):
+        return super(NormalizeInverse, self).__call__(tensor.clone())
+
+
+def create_folder(folder_name):
+    try:
+        subprocess.call(['mkdir','-p',folder_name])
+    except OSError:
+        None
+
+def save_saliency_map(image, saliency_map, filename):
+    """ 
+    Save saliency map on image.
+    
+    Args:
+        image: Tensor of size (3,H,W)
+        saliency_map: Tensor of size (1,H,W) 
+        filename: string with complete path and file extension
+
+    """
+
+    image = image.data.cpu().numpy()
+    saliency_map = saliency_map.data.cpu().numpy()
+
+    saliency_map = saliency_map - saliency_map.min()
+    saliency_map = saliency_map / saliency_map.max()
+    saliency_map = saliency_map.clip(0,1)
+
+    saliency_map = np.uint8(saliency_map * 255).transpose(1, 2, 0)
+    saliency_map = cv2.resize(saliency_map, (224,224))
+
+    image = np.uint8(image * 255).transpose(1,2,0)
+    image = cv2.resize(image, (224, 224))
+
+    # Apply JET colormap
+    color_heatmap = cv2.applyColorMap(saliency_map, cv2.COLORMAP_JET)
+    
+    # Combine image with heatmap
+    img_with_heatmap = np.float32(color_heatmap) + np.float32(image)
+    img_with_heatmap = img_with_heatmap / np.max(img_with_heatmap)
+
+    cv2.imwrite(filename, np.uint8(255 * img_with_heatmap))
+
+#########dump images .py
+#
+# Copyright (c) 2019 Idiap Research Institute, http://www.idiap.ch/
+# Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
+#
+
+""" Compute saliency maps of images from dataset folder
+    and dump them in a results folder """
+
+from torchvision import datasets, utils, models
+
+
+# PATH variables
+PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
+dataset = os.path.join(current_dir, "Sign Language", "test_processed")
+
+unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
+                           std = [0.229, 0.224, 0.225])
+
+def compute_saliency_and_save():
+    for batch_idx, (data, _) in enumerate(test_loader):
+        data = data.to(device).requires_grad_()
+
+        # Compute saliency maps for the input data
+        saliency_map = GradCAM(final_model).saliency(data)
+
+        # Save saliency maps
+        for i in range(data.size(0)):
+            filename = save_path + str( (batch_idx+1) * (i+1))
+            image = unnormalize(data[i].cpu())
+            save_saliency_map(image, saliency_map[i], filename + '_' + '.jpg')
+
+
+#if __name__ == "__main__":
+# Create folder to saliency maps
+#save_path = PATH + 'results/'
+save_path = os.path.join(current_dir, "Saliency Maps", "results_alexnet_model_1")
+create_folder(save_path)
+compute_saliency_and_save()
+print('Saliency maps saved.')
 
