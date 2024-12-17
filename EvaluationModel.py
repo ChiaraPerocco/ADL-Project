@@ -348,9 +348,18 @@ barWidth = 0.25
 fig = plt.subplots(figsize =(12, 8)) 
 
 # set height of bar 
+<<<<<<< HEAD
 AlexNet_bar = [f1_alexNet, test_acc_alexNet, precision_alexNet, recall_alexNet] 
 ResNet50_bar = [f1_resNet50, test_acc_resNet50, precision_resNet50, recall_resNet50] 
 ViT_bar = [f1_ViT, test_acc_ViT, precision_ViT, recall_ViT] 
+=======
+AlexNet_bar = [f1_alexNet, test_acc_alexNet, precision_alexNet] 
+ResNet50_bar = [f1_resNet50, test_acc_resNet50, precision_resNet50] 
+ViT_bar = [f1_ViT, test_acc_ViT, precision_ViT] 
+print(AlexNet_bar)
+print(ResNet50_bar)
+print(ViT_bar)
+>>>>>>> c7313e9ca41f682bd41045595fcaed668929fcb7
 
 # Set position of bar on X axis 
 br1 = np.arange(len(AlexNet_bar)) 
@@ -365,14 +374,30 @@ plt.bar(br2, ResNet50_bar, color ='g', width = barWidth,
 plt.bar(br2, ResNet50_bar, color ='b', width = barWidth, 
         edgecolor ='grey', label ='ViT')
 
+# Adding values on top of the bars
+for i in range(len(AlexNet_bar)):
+    # Runde die Werte auf 4 Dezimalstellen und platziere sie direkt auf den Balken
+    plt.text(br1[i], AlexNet_bar[i], f'{round(AlexNet_bar[i], 4)}', ha='center', fontsize=18)
+    plt.text(br2[i], ResNet50_bar[i], f'{round(ResNet50_bar[i], 4)}', ha='center', fontsize=18)
+    plt.text(br3[i], ViT_bar[i], f'{round(ViT_bar[i], 4)}', ha='center', fontsize=18)
+
 
 # Adding Xticks 
+<<<<<<< HEAD
 plt.xlabel('Comparison of the classification methods in the testing stage', fontweight ='bold', fontsize = 15) 
 plt.ylabel('Accuracy', fontweight ='bold', fontsize = 15) 
+=======
+plt.xlabel('Comparison of the classification methods in the testing stage', fontweight ='bold', fontsize = 24) 
+plt.ylabel('values', fontweight ='bold', fontsize = 24) 
+>>>>>>> c7313e9ca41f682bd41045595fcaed668929fcb7
 plt.xticks([r + barWidth for r in range(len(AlexNet_bar))], 
-        ['F-Measure', 'Accuracy', 'Precision', 'Recall'])
+        ['F-Measure', 'Accuracy', 'Precision'], fontsize = 24)
 
-plt.legend()
+# Setze die Schriftgröße für die Ticks auf der x- und y-Achse
+plt.yticks(fontsize=24)  # Ändere die Schriftgröße für die y-Achse
+
+# Set larger font for legend and labels
+plt.legend(fontsize=24, bbox_to_anchor=(0.98, 1), loc='upper left')
 plt.show() 
 plt.clf()  # Löscht die Figur für den nächsten Plot
 
