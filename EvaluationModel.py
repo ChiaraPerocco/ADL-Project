@@ -26,8 +26,8 @@ dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 
 ### Import the models
 #resnet50_model = torch.load('resnet50_model_dataset2.pth')
-#alexnet_model = torch.load('alexnet_model.pth')
-ViT_model = torch.load('ViT_model_dataset2.pth')
+alexnet_model = torch.load('alexnet_model_dataset2.pth')
+#ViT_model = torch.load('ViT_model_dataset2.pth')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -62,9 +62,9 @@ print(epochs)
 # Test model on AlexNet model
 #
 ###################################################################################################
-"""
+
 ### Import validation accuracy 
-alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values.pth"))
+alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2.pth"))
 # Retrieve saved variables
 alexNet_hyper_params = alexNet_params['hyper_params']
 alexNet_num_epoch = alexNet_hyper_params['num_epochs']
@@ -80,13 +80,14 @@ print(alexNet_train_loss)
 epochs = list(range(1, alexNet_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(alexNet_train_loss) == len(alexNet_val_loss) == len(alexNet_train_acc) == len(alexNet_val_acc))
-"""
+
 
 ###################################################################################################
 #
 # Test model on Vision Transformer model
 #
 ###################################################################################################
+"""
 ### Import validation accuracy 
 ViT_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "ViT_values.pth"))
 # Retrieve saved variables
@@ -104,65 +105,95 @@ print(ViT_train_loss)
 epochs = list(range(1, ViT_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(ViT_train_loss) == len(ViT_val_loss) == len(ViT_train_acc) == len(ViT_val_acc))
-
+"""
 
 ###################################################################################################
 #
 # Test model on AlexNet
 #
 ###################################################################################################
-if False: 
-        # Test the model on the test data
-        def test_model(model, test_loader):
-                model.eval()
-                test_corrects = 0
-                all_labels_alexNet = []
-                all_preds_alexNet = []
+if True: 
+     # get test loader
+    def get_test_loader(data_dir,
+                        batch_size,
+                        shuffle=True):
+        normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        )
 
-                with torch.no_grad():
-                        for inputs, labels in test_loader:
-                                inputs = inputs.to(device)
-                                labels = labels.to(device)
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),   #Bildgröße anpassen
+            transforms.ToTensor(),
+            normalize,
+        ])
+        
 
-                                outputs = model(inputs)
-                                _, preds = torch.max(outputs, 1)
-                                test_corrects += torch.sum(preds == labels.data)
+        # Lade den Testdatensatz
+        test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+
+        # Erstellen des DataLoaders für Testdaten
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+
+        return test_loader
+    
+    # Load test data
+    test_loader = get_test_loader(
+        data_dir= dataset_test, # Pfad zu den Testdaten
+        batch_size=alexNet_hyper_params['batch_size']
+    )
+    
+    # Test the model on the test data
+    def test_model(model, test_loader):
+        model.eval()
+        test_corrects = 0
+        all_labels_alexNet = []
+        all_preds_alexNet = []
+
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                test_corrects += torch.sum(preds == labels.data)
 
 
-                                # Speichern der Labels und Vorhersagen für spätere Auswertungen
-                                all_labels_alexNet.extend(labels.cpu().numpy())
-                                all_preds_alexNet.extend(preds.cpu().numpy())
+                # Speichern der Labels und Vorhersagen für spätere Auswertungen
+                all_labels_alexNet.extend(labels.cpu().numpy())
+                all_preds_alexNet.extend(preds.cpu().numpy())
 
-                # Convert numerical labels and predictions to class names
-                #true_labels = [class_names[i] for i in all_labels_alexNet]
-                #predicted_labels = [class_names[i] for i in all_preds_alexNet]
+        # Convert numerical labels and predictions to class names
+        #true_labels = [class_names[i] for i in all_labels_alexNet]
+        #predicted_labels = [class_names[i] for i in all_preds_alexNet]
 
-                # Berechnung der Test Accuracy
-                test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
-                print(f'Test Accuracy: {test_acc_alexNet:.4f}')
+        # Berechnung der Test Accuracy
+        test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
+        print(f'Test Accuracy: {test_acc_alexNet:.4f}')
 
-                # Berechnung von Precision, Recall und F1-Score
-                precision_alexNet, recall_alexNet, f1_alexNet, _ = precision_recall_fscore_support(all_labels_alexNet, all_preds_alexNet, average='weighted')
+        # Berechnung von Precision, Recall und F1-Score
+        precision_alexNet, recall_alexNet, f1_alexNet, _ = precision_recall_fscore_support(all_labels_alexNet, all_preds_alexNet, average='weighted')
                 
-                print(f'Test Accuracy: {test_acc_alexNet:.4f}')
-                print(f'Precision: {precision_alexNet:.4f}')
-                print(f'Recall: {recall_alexNet:.4f}')
-                print(f'F1-Score: {f1_alexNet:.4f}')
+        print(f'Test Accuracy: {test_acc_alexNet:.4f}')
+        print(f'Precision: {precision_alexNet:.4f}')
+        print(f'Recall: {recall_alexNet:.4f}')
+        print(f'F1-Score: {f1_alexNet:.4f}')
                 
-                print(f'Labels Testdaten: {all_labels_alexNet}')
-                print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
-                # Rückgabe der Metriken
-                return test_acc_alexNet.item(), precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet
+        print(f'Labels Testdaten: {all_labels_alexNet}')
+        print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
+        # Rückgabe der Metriken
+        return test_acc_alexNet.item(), precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet
 
-                # Testen auf Testdaten und Speichern der Metriken und label
-                test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(alexnet_model, test_loader)
+    # Testen auf Testdaten und Speichern der Metriken und label
+    test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(alexnet_model, test_loader)
 
 ###################################################################################################
 #
 # Test model on ViT model
 #
 ###################################################################################################
-if True:
+if False:
     # get test loader
     def get_test_loader(data_dir,
                         batch_size,
@@ -399,7 +430,7 @@ ax1.legend(loc='upper left')
 ax2.legend(loc='lower left')
 
 plt.show()
-
+"""
 ###################################################################################################
 ### Evaluation: AlexNet
 ###################################################################################################
@@ -452,11 +483,11 @@ ax1.legend(loc='upper left')
 ax2.legend(loc='lower left')
 
 plt.show()
-"""
+
 ###################################################################################################
 ### Evaluation: Vision Transformer
 ###################################################################################################
-
+"""
 ### Confusion Matrix:
 conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
@@ -505,7 +536,7 @@ ax1.legend(loc='upper left')
 ax2.legend(loc='lower left')
 
 plt.show()
-
+"""
 ###################################################################################################
 ###Confusion Matrix
 ###################################################################################################
@@ -524,7 +555,7 @@ if True:
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
 """
-if True:
+if False:
     # Confusion Matrix: ViT
     conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
@@ -538,7 +569,7 @@ if True:
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
 
-"""
+
     # Confusion Matrix: AlexNet
     conf_matrix_alexNet = confusion_matrix(all_labels_alexNet, all_preds_alexNet)
 
@@ -549,7 +580,7 @@ if True:
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
     plt.show()
-"""
+
 
 if False:
 

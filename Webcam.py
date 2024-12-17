@@ -78,6 +78,10 @@ def save_frame_camera_key(basename, dir_path, rtsp_url=None, ext='jpg', delay=1)
     # Create the base path for the images to be saved
     base_path = os.path.join(dir_path, basename)
 
+    # Check if the directory contains any files and delete them if necessary
+    if os.path.exists(base_path + f'_0.{ext}'):
+        os.remove(base_path + f'_0.{ext}')
+
     n = 0
     while True:
         # Read the current frame from the camera
@@ -108,5 +112,5 @@ def save_frame_camera_key(basename, dir_path, rtsp_url=None, ext='jpg', delay=1)
 
 
 # Pass the RTSP URL to capture from the IP camera
-rtsp_url = 'rtsp://10.180.166.213'  # Replace with your RTSP URL
+rtsp_url = 'rtsp://10.183.39.51:551/stream'  # Replace with your RTSP URL
 save_frame_camera_key('camera_capture', dir_path=dir_path, rtsp_url=rtsp_url)
