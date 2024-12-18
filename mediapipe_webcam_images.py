@@ -1,34 +1,22 @@
+import os
 import cv2
 import mediapipe as mp
-import numpy as np
-import os
 
-# Absoluten Pfad des aktuellen Skripts ermitteln
-current_dir = os.path.dirname(__file__)
-print(current_dir)
+def image_processing(input_folder, output_folder):
+    # MediaPipe Hand Modul initialisieren
+    mp_hands = mp.solutions.hands
+    hands = mp_hands.Hands(min_detection_confidence=0.2, min_tracking_confidence=0.5)
 
-# MediaPipe Hand Modul initialisieren
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.2, min_tracking_confidence=0.5)
-
-# Pfade anpassen
-input_folder = os.path.join(current_dir, "Sign Language", "val")
-output_folder = os.path.join(current_dir, "Sign Language", "val_processed")
-
-# Erstelle den Zielordner, falls er nicht existiert
-os.makedirs(output_folder, exist_ok=True)
-
-# Durchlaufe alle Unterordner
-for subfolder in os.listdir(input_folder):
-    subfolder_path = os.path.join(input_folder, subfolder)
-    if os.path.isdir(subfolder_path):
-        # Ziel-Unterordner erstellen
-        target_subfolder = os.path.join(output_folder, subfolder)
+    # Durchlaufe alle Dateien und Unterordner im input_folder
+    for root, dirs, files in os.walk(input_folder):
+        # Berechne den relativen Pfad für das Ziel
+        relative_path = os.path.relpath(root, input_folder)
+        target_subfolder = os.path.join(output_folder, relative_path)
         os.makedirs(target_subfolder, exist_ok=True)
 
-        # Alle Bilder im aktuellen Unterordner durchlaufen
-        for image_name in os.listdir(subfolder_path):
-            image_path = os.path.join(subfolder_path, image_name)
+        # Alle Bilder im aktuellen Verzeichnis (root) durchlaufen
+        for image_name in files:
+            image_path = os.path.join(root, image_name)
             if os.path.isfile(image_path) and image_name.lower().endswith(('jpg', 'jpeg', 'png')):
                 # Bild laden
                 image = cv2.imread(image_path)
@@ -61,18 +49,15 @@ for subfolder in os.listdir(input_folder):
                         hand_region = image[y_min:y_max, x_min:x_max]
                         zoomed_hand = cv2.resize(hand_region, (width, height), interpolation=cv2.INTER_CUBIC)
 
-                        # Pfade für die Speicherung
-                        original_output_path = os.path.join(target_subfolder, f"original_{image_name}")
+                        # Pfad für die Speicherung des verarbeiteten Bildes
                         processed_output_path = os.path.join(target_subfolder, f"processed_{image_name}")
 
-                        # Speichere das Originalbild
-                        cv2.imwrite(original_output_path, image)
-                        # Speichere das gezoomte Bild
+                        # Speichere nur das verarbeitete Bild (gezoomte Hand)
                         cv2.imwrite(processed_output_path, zoomed_hand)
 
                 else:
-                    # Falls keine Hand erkannt wird, speichere nur das Original
+                    # Falls keine Hand erkannt wird, speichere nur das Originalbild
                     original_output_path = os.path.join(target_subfolder, f"original_{image_name}")
                     cv2.imwrite(original_output_path, image)
 
-print("Verarbeitung abgeschlossen!")
+    print("Verarbeitung abgeschlossen!")
