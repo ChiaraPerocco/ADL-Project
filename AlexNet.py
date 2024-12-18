@@ -253,7 +253,7 @@ def objective(trial):
     # Suggest hyperparameters
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical('batch_size', [64])
-    num_epochs = trial.suggest_int('num_epochs', 1, 100)
+    num_epochs = trial.suggest_int('num_epochs', 1, 50)
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -437,7 +437,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     os.makedirs(eval_folder_path, exist_ok=True)
     
     # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_2.pth"))
 
     return model
 
@@ -500,7 +500,7 @@ test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alex
 
 
 # Save the entire model
-torch.save(final_model, 'alexNet_model_dataset2.pth')
+torch.save(final_model, 'alexNet_model_dataset2_2.pth')
 
 ###################################################################################################
 #
@@ -691,7 +691,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results_alexNet_dataset2")
+save_path = os.path.join(current_dir, "Saliency Maps", "results_alexNet_dataset2_2")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
