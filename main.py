@@ -110,6 +110,9 @@ def main(photo, photo_shot, run):
     else:
         print("Unknown model")
 
+
+    # Create Images with Diffusion Model or take existing
+
     # Execute the LLM
     if llm == "Ja":
         if question == "default":

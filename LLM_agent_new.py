@@ -3,6 +3,7 @@
 # Create Diffusion Model
 #
 ###################################################################################################
+"""
 from diffusers import DiffusionPipeline
 import torch
 import os
@@ -12,9 +13,9 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> d
 current_dir = os.path.dirname(__file__)
 
 # Load the pipeline
-#pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", torch_dtype=torch.float16)
-pipeline = DiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", torch_dtype=torch.float16)
-#pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5")
+#pipeline = DiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", torch_dtype=torch.float16)
+pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
 
 # Prompt user for desired image name
 #image_filename = input("Enter the desired base name for your images (e.g., article_image): ")
@@ -22,15 +23,10 @@ pipeline = DiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", to
 
 # Define the prompts for variety
 prompts = [
-    #"An image about the history of sign language",
-    #"An image about the importance of sign language",
-    #"An image about education of sign language",
-    #"An image about the future of sign language"
-
-    "An image of a squirrel in Picasso style",
-    "A squirrel in a surreal landscape with vibrant colors",
-    "A squirrel in the style of abstract expressionism",
-    "A whimsical painting of a squirrel with geometric shapes"
+    "An image about the history of sign language",
+    "An image about the importance of sign language",
+    "An image about education of sign language",
+    "An image about the future of sign language"
 ]
 
 # Generate and save 4 different images
@@ -45,6 +41,12 @@ for i, prompt in enumerate(prompts, 1):
     image.save(image_path)
     print(f"Image {i} saved as {image_path}")
 
+"""
+#from stable_diffusion import StableDiffusion
+
+#model = StableDiffusion()
+#image = model.generate("A beautiful landscape painting")
+#image.show()
 
 ###################################################################################################
 #
@@ -52,6 +54,10 @@ for i, prompt in enumerate(prompts, 1):
 # https://cookbook.openai.com/examples/how_to_build_a_tool-using_agent_with_langchain
 #
 ###################################################################################################
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
+
+
 import re
 from typing import List, Union
 import torch
@@ -69,6 +75,10 @@ from huggingface_hub import login
 from langchain_huggingface.llms import HuggingFacePipeline
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from transformers import pipeline
+
+# Get the path of current_dir
+current_dir = os.path.dirname(__file__)
+
 
 # API Key Hugging Face
 access_token = "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"
@@ -315,12 +325,28 @@ pdf = PDF()
 paragraphs = answer.strip().split("\n\n")  # Absätze erkennen anhand doppelter Zeilenumbrüche
 
 # Prüfen, ob genug Bilder vorhanden sind
-if len(paragraphs) > len(image_paths):
-    raise ValueError("Nicht genügend Bilder für die Absätze vorhanden!")
+#if len(paragraphs) > len(image_paths):
+#    raise ValueError("Nicht genügend Bilder für die Absätze vorhanden!")
 
 # Absätze und Bilder hinzufügen
-for paragraph, image_path in zip(paragraphs, image_paths):
-    pdf.add_paragraph_with_image(paragraph.strip(), image_path)
+#for paragraph, image_path in zip(paragraphs, image_paths):
+#    pdf.add_paragraph_with_image(paragraph.strip(), image_path)
+
+# Bilder und Absätze hinzufügen
+for i, paragraph in enumerate(paragraphs):
+    # Hinzufügen des Textes
+    pdf.add_paragraph(paragraph.strip())
+
+    # Prüfen, ob noch Bilder vorhanden sind und wie viele
+    if i < len(image_paths):  # Bild hinzufügen, wenn noch Bilder vorhanden sind
+        image_path = image_paths[i]
+        pdf.add_image(image_path)
+    elif i < len(image_paths) + len(image_paths) // 2:  # Zwei Bilder nebeneinander
+        if i + 1 < len(image_paths):  # Sicherstellen, dass es ein weiteres Bild gibt
+            image_path1 = image_paths[i]
+            image_path2 = image_paths[i + 1]
+            pdf.add_two_images(image_path1, image_path2)
+            i += 1  # Um den nächsten Absatz nach beiden Bildern zu überspringen
 
 # PDF speichern
 pdf.output("output.pdf")
