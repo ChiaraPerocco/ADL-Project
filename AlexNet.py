@@ -46,6 +46,16 @@ def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, 
             transforms.Resize((256, 256)),
             transforms.RandomCrop(224, padding=4),
             transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(15),                # Random rotation between -15 to 15 degrees
+            transforms.ColorJitter(brightness=0.2,        # Random color variations
+                                contrast=0.2, 
+                                saturation=0.2, 
+                                hue=0.1),
+            transforms.RandomAffine(degrees=0,            # Random affine transformations (scale, shear)
+                                    translate=(0.1, 0.1), 
+                                    scale=(0.9, 1.1), 
+                                    shear=10),
+            transforms.RandomGrayscale(p=0.1),            # Randomly convert images to grayscale
             transforms.ToTensor(),
             normalize,
         ])
@@ -134,126 +144,26 @@ class AlexNet(nn.Module):
         out = self.fc2(out)
         return out
     
+batch_size = 32
+learning_rate = 10**-5
+num_epochs = 50
+
+best_params = {
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'num_epochs': num_epochs
+}
 
 if False:
-    test_loader = get_test_loader(
-        data_dir = dataset_test, # Pfad zu den Testdaten
-        batch_size = batch_size
-    )
+    batch_size = 32
+    learning_rate = 10**-5
+    num_epochs = 50
 
-
-    model = AlexNet(num_classes).to(device)
-
-    # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
-
-    # Train the model
-    total_step = len(train_loader)
-
-    total_step = len(train_loader)
-
-
-    for epoch in range(num_epochs):
-        for i, (images, labels) in enumerate(train_loader):  
-            
-            print(images.shape)
-        
-            # Move tensors to the configured device
-            images = images.to(device)
-            labels = labels.to(device)
-
-            print(images.shape)
-            # Forward pass
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-
-            # Backward and optimize
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
-                    .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
-
-        # Validation
-        with torch.no_grad():
-            correct = 0
-            total = 0
-
-            all_val_labels = []
-            all_val_preds = []
-
-            for images, labels in valid_loader:
-                images = images.to(device)
-                labels = labels.to(device)
-                outputs = model(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
-                # Speichern der Labels und Vorhersagen für Berechnung
-                all_val_labels.extend(labels.cpu().numpy())
-                all_val_preds.extend(predicted.cpu().numpy())
-                
-                del images, labels, outputs
-
-            # Berechnung der Validation Accuracy
-            val_accuracy = 100 * correct / total
-
-            print('Accuracy of the network on the {} validation images: {} %'.format(total, val_accuracy)) 
-
-            # Berechnung von Precision, Recall, F1-Score für Validation
-            val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(all_val_labels, all_val_preds, average='weighted')
-            
-            # Ausgabe und Speicherung der Validierungsmetriken
-            print(f'Validation Precision: {val_precision:.4f}')
-            print(f'Validation Recall: {val_recall:.4f}')
-            print(f'Validation F1-Score: {val_f1:.4f}')
-
-    # Testing
-    with torch.no_grad():
-        correct = 0
-        total = 0
-
-        all_test_labels_alexNet = []
-        all_test_preds_alexNet = []
-
-        for images, labels in test_loader:
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-            # Speichern der Labels und Vorhersagen für spätere Berechnung
-            all_test_labels_alexNet.extend(labels.cpu().numpy())
-            all_test_preds_alexNet.extend(predicted.cpu().numpy())
-
-            del images, labels, outputs
-
-        # Berechnung der Test Accuracy
-        test_accuracy_alexNet = correct / total
-        print('Accuracy of the network on the {} test images: {} %'.format(total, test_accuracy_alexNet))
-        
-        # Berechnung von Precision, Recall, F1-Score für den Test
-        test_precision_alexNet, test_recall_alexNet, test_f1_alexNet, _ = precision_recall_fscore_support(all_test_labels_alexNet, all_test_preds_alexNet, average='weighted')
-        
-        # Ausgabe und Speicherung der Testmetriken
-        print(f'Test Precision AlexNet: {test_precision_alexNet:.4f}')
-        print(f'Test Recall AlexNet: {test_recall_alexNet:.4f}')
-        print(f'Test F1-Score AlexNet: {test_f1_alexNet:.4f}')
-
-
-
-# Optuna objective function for hyperparameter tuning
-# https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
-def objective(trial):
-    # Suggest hyperparameters
-    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [64])
-    num_epochs = trial.suggest_int('num_epochs', 1, 50)
+    best_params = {
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'num_epochs': num_epochs
+    }
 
     # Load data with current batch size
     train_loader, valid_loader = get_train_valid_loader(
@@ -279,24 +189,24 @@ def objective(trial):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
+        
     model.train()
     for epoch in range(num_epochs):
-            running_loss = 0.0
-            running_corrects = 0
-            for inputs, labels in train_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+        running_loss = 0.0
+        running_corrects = 0
+        for inputs, labels in train_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss / len(train_loader.dataset)
             epoch_acc = running_corrects.double() / len(train_loader.dataset)
@@ -312,23 +222,100 @@ def objective(trial):
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
             loss = criterion(outputs, labels)
-                
+                 
             val_loss += loss.item() * inputs.size(0)
             val_corrects += torch.sum(preds == labels.data)
 
         val_loss = val_loss / len(valid_loader.dataset)
         val_acc = val_corrects.double() / len(valid_loader.dataset)
+                
+
+
+
+
+if False:
+    # Optuna objective function for hyperparameter tuning
+    # https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
+    def objective(trial):
+        # Suggest hyperparameters
+        learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
+        batch_size = trial.suggest_categorical('batch_size', [64])
+        num_epochs = trial.suggest_int('num_epochs', 1, 50)
+
+        # Load data with current batch size
+        train_loader, valid_loader = get_train_valid_loader(
+            data_dir_train=dataset_train,
+            data_dir_valid=dataset_val,
+            batch_size=batch_size,
+            augment=True,
+            shuffle=True
+        )
+
+        # Load model
+        model = AlexNet(num_classes).to(device)
+
+        # Loss and optimizer
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
+
+        # Train the model
+        total_step = len(train_loader)
+
+        total_step = len(train_loader)
+
+        # Loss and optimizer
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
         
-        return val_acc
+        model.train()
+        for epoch in range(num_epochs):
+                running_loss = 0.0
+                running_corrects = 0
+                for inputs, labels in train_loader:
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
 
-# Run the Optuna study
-study = optuna.create_study(direction="maximize") # is it minimize or maximize
-study.optimize(objective, n_trials=1)
+                    optimizer.zero_grad()
+                    outputs = model(inputs)
+                    _, preds = torch.max(outputs, 1)
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    optimizer.step()
 
-# Print the best hyperparameters
-best_params = study.best_params
-print("Beste Hyperparameter:", best_params)
-print("Bester Validierungsverlust:", study.best_value)
+                    running_loss += loss.item() * inputs.size(0)
+                    running_corrects += torch.sum(preds == labels.data)
+
+                epoch_loss = running_loss / len(train_loader.dataset)
+                epoch_acc = running_corrects.double() / len(train_loader.dataset)
+
+        model.eval()
+        val_loss = 0.0
+        val_corrects = 0
+        with torch.no_grad():
+            for inputs, labels in valid_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                loss = criterion(outputs, labels)
+                    
+                val_loss += loss.item() * inputs.size(0)
+                val_corrects += torch.sum(preds == labels.data)
+
+            val_loss = val_loss / len(valid_loader.dataset)
+            val_acc = val_corrects.double() / len(valid_loader.dataset)
+            
+            return val_acc
+
+    # Run the Optuna study
+    study = optuna.create_study(direction="maximize") # is it minimize or maximize
+    study.optimize(objective, n_trials=1)
+
+    # Print the best hyperparameters
+    best_params = study.best_params
+    print("Beste Hyperparameter:", best_params)
+    print("Bester Validierungsverlust:", study.best_value)
 
 # Use the best hyperparameters to train the final model
 def train_final_model(best_params, dataset_train, dataset_val, device):
@@ -437,7 +424,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     os.makedirs(eval_folder_path, exist_ok=True)
     
     # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_2.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_3.pth"))
 
     return model
 
@@ -500,7 +487,7 @@ test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alex
 
 
 # Save the entire model
-torch.save(final_model, 'alexNet_model_dataset2_2.pth')
+torch.save(final_model, 'alexNet_model_dataset2_3.pth')
 
 ###################################################################################################
 #
@@ -691,7 +678,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results_alexNet_dataset2_2")
+save_path = os.path.join(current_dir, "Saliency Maps", "results_alexNet_dataset2_3")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')

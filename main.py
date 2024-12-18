@@ -16,7 +16,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> d
 
 
 ### Import functions
-#from Webcam import save_frame_camera_key, dir_path
+from Webcam import save_frame_camera_key, dir_path
 #from LLM import create_article_pdf, generate_image_caption, generate_answer_for_section, draw_wrapped_text
 from mediapipe_webcam_images import image_processing
 
@@ -34,6 +34,12 @@ output_folder = os.path.join(current_dir, "webcam_images_processed")
 # Erstelle den Zielordner, falls er nicht existiert
 os.makedirs(output_folder, exist_ok=True)
 
+# Check if the directory contains any files and delete them if necessary
+# Alle .jpg-Dateien im Ordner löschen
+for datei in os.listdir(output_folder):
+    if datei.lower().endswith('.jpg'):
+        os.remove(os.path.join(output_folder, datei))
+        
 # Process image
 # Aufruf der Funktion aus dem anderen Skript
 image_processing(input_folder, output_folder)
