@@ -8,6 +8,7 @@ import torch
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from sklearn.metrics import precision_recall_fscore_support
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
 
@@ -32,6 +33,9 @@ batch_size = 64 # need to include hyperparameters
 ViT = torch.load('ViT_model.pth')
 #ResNet = torch.load('resnet50_model.pth')
 #AlexNet = torch.load('alexnet_model.pth')
+
+current_dir = os.path.dirname(__file__)
+dir_path = os.path.join(current_dir, "webcam_images")
 
 # get test loader
 def get_test_loader(data_dir,
@@ -63,9 +67,33 @@ test_loader = get_test_loader(
     batch_size=64  # needs to be modified???!!!
 )
 
+# Test the model on the test data
+def test_model(model, test_loader):
+    model.eval()
+    test_corrects = 0
+    all_preds_alexNet = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            test_corrects += torch.sum(preds == labels.data)
+
+
+            # Speichern der Labels und Vorhersagen für spätere Auswertungen
+            all_preds_alexNet.extend(preds.cpu().numpy())
+    
+    print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
+    # Rückgabe der Metriken
+
+    return all_preds_alexNet
+
 ### Get the predicted label
 # Run the model with the saved images from the webcam
-test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(ViT, test_loader)
+all_preds_ViT = test_model(ViT, test_loader)
 
 
 ### LLM

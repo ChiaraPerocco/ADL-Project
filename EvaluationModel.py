@@ -5,7 +5,6 @@
 ###################################################################################################
 ### Import packages
 import torch
-import torch.nn as nn
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -15,7 +14,6 @@ from sklearn.metrics import  confusion_matrix
 import seaborn as sns
 from sklearn.metrics import precision_recall_fscore_support
 import os
-#from AlexNet import AlexNet
 
 
 ### Import data set
@@ -23,76 +21,23 @@ import os
 current_dir = os.path.dirname(__file__)
 print(current_dir)
 # relative path of test data set
-#dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
-dataset_test = os.path.join(current_dir, "Sign Language", "test")
+dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 
-# Load AlexNet class
-class AlexNet(nn.Module):
-    def __init__(self, num_classes=10):
-        super(AlexNet, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=0),
-            nn.BatchNorm2d(96),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(96, 256, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(256, 384, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(384),
-            nn.ReLU())
-        self.layer4 = nn.Sequential(
-            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(384),
-            nn.ReLU())
-        self.layer5 = nn.Sequential(
-            nn.Conv2d(384, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.fc = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(6400, 4096),
-            nn.ReLU())
-        self.fc1 = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
-            nn.ReLU())
-        self.fc2= nn.Sequential(
-            nn.Linear(4096, num_classes))
 
-    def forward(self, x):
-        out = self.layer1(x)
-        print("Layer 1 Output Shape:", out.shape)
-        out = self.layer2(out)
-        print("Layer 2 Output Shape:", out.shape)
-        out = self.layer3(out)
-        print("Layer 3 Output Shape:", out.shape)
-        out = self.layer4(out)
-        print("Layer 4 Output Shape:", out.shape)
-        out = self.layer5(out)
-        print("Layer 5 Output Shape:", out.shape)
-        out = out.reshape(out.size(0), -1)
-        out = self.fc(out)
-        out = self.fc1(out)
-        out = self.fc2(out)
-        return out
-    
 ### Import the models
-resnet50_model = torch.load('resnet50_model_dataset2.pth')
-alexnet_model = torch.load('alexnet_model.pth')
-ViT_model = torch.load('ViT_model_dataset2.pth')
+#resnet50_model = torch.load('resnet50_model_dataset2.pth')
+alexnet_model = torch.load('alexnet_model_dataset2.pth')
+#ViT_model = torch.load('ViT_model_dataset2.pth')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(device)
+
+
 ###################################################################################################
 #
 # Test model on resnet50 model
 #
 ###################################################################################################
+"""
 ### Import validation accuracy 
 resnet50_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2.pth"))
 # Retrieve saved variables
@@ -110,14 +55,16 @@ print(resnet50_train_loss)
 epochs = list(range(1, resnet50_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(resnet50_train_loss) == len(resnet50_val_loss) == len(resnet50_train_acc) == len(resnet50_val_acc))
+"""
 
 ###################################################################################################
 #
 # Test model on AlexNet model
 #
 ###################################################################################################
+
 ### Import validation accuracy 
-alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values.pth"))
+alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2.pth"))
 # Retrieve saved variables
 alexNet_hyper_params = alexNet_params['hyper_params']
 alexNet_num_epoch = alexNet_hyper_params['num_epochs']
@@ -134,11 +81,13 @@ epochs = list(range(1, alexNet_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(alexNet_train_loss) == len(alexNet_val_loss) == len(alexNet_train_acc) == len(alexNet_val_acc))
 
+
 ###################################################################################################
 #
 # Test model on Vision Transformer model
 #
 ###################################################################################################
+"""
 ### Import validation accuracy 
 ViT_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "ViT_values.pth"))
 # Retrieve saved variables
@@ -156,14 +105,15 @@ print(ViT_train_loss)
 epochs = list(range(1, ViT_num_epoch + 1))
 print(epochs)
 (len(epochs) == len(ViT_train_loss) == len(ViT_val_loss) == len(ViT_train_acc) == len(ViT_val_acc))
+"""
 
 ###################################################################################################
 #
 # Test model on AlexNet
 #
 ###################################################################################################
-if True:
-        # get test loader
+if True: 
+     # get test loader
     def get_test_loader(data_dir,
                         batch_size,
                         shuffle=True):
@@ -186,13 +136,13 @@ if True:
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
         return test_loader
-
+    
     # Load test data
     test_loader = get_test_loader(
         data_dir= dataset_test, # Pfad zu den Testdaten
         batch_size=alexNet_hyper_params['batch_size']
     )
-
+    
     # Test the model on the test data
     def test_model(model, test_loader):
         model.eval()
@@ -214,11 +164,11 @@ if True:
                 all_labels_alexNet.extend(labels.cpu().numpy())
                 all_preds_alexNet.extend(preds.cpu().numpy())
 
-                # Convert numerical labels and predictions to class names
-                #true_labels = [class_names[i] for i in all_labels_alexNet]
-                #predicted_labels = [class_names[i] for i in all_preds_alexNet]
+        # Convert numerical labels and predictions to class names
+        #true_labels = [class_names[i] for i in all_labels_alexNet]
+        #predicted_labels = [class_names[i] for i in all_preds_alexNet]
 
-                # Berechnung der Test Accuracy
+        # Berechnung der Test Accuracy
         test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
         print(f'Test Accuracy: {test_acc_alexNet:.4f}')
 
@@ -243,7 +193,7 @@ if True:
 # Test model on ViT model
 #
 ###################################################################################################
-if True:
+if False:
     # get test loader
     def get_test_loader(data_dir,
                         batch_size,
@@ -326,7 +276,7 @@ if True:
 #
 ###################################################################################################
 # get test loader
-if True:
+if False:
     def get_test_loader(data_dir,
                         batch_size,
                         shuffle=True):
@@ -392,17 +342,24 @@ if True:
 ###################################################################################################
 ###Comparison of the classification methods in the testing stage
 ###################################################################################################
+"""
 # set width of bar 
 barWidth = 0.25
 fig = plt.subplots(figsize =(12, 8)) 
 
 # set height of bar 
+<<<<<<< HEAD
 AlexNet_bar = [f1_alexNet, test_acc_alexNet, precision_alexNet, recall_alexNet] 
 ResNet50_bar = [f1_resNet50, test_acc_resNet50, precision_resNet50, recall_resNet50] 
 ViT_bar = [f1_ViT, test_acc_ViT, precision_ViT, recall_ViT] 
+=======
+AlexNet_bar = [f1_alexNet, test_acc_alexNet, precision_alexNet] 
+ResNet50_bar = [f1_resNet50, test_acc_resNet50, precision_resNet50] 
+ViT_bar = [f1_ViT, test_acc_ViT, precision_ViT] 
 print(AlexNet_bar)
 print(ResNet50_bar)
 print(ViT_bar)
+>>>>>>> c7313e9ca41f682bd41045595fcaed668929fcb7
 
 # Set position of bar on X axis 
 br1 = np.arange(len(AlexNet_bar)) 
@@ -414,20 +371,37 @@ plt.bar(br1, AlexNet_bar, color ='r', width = barWidth,
         edgecolor ='grey', label ='AlexNet') 
 plt.bar(br2, ResNet50_bar, color ='g', width = barWidth, 
         edgecolor ='grey', label ='ResNet50')
-plt.bar(br3, ViT_bar, color ='b', width = barWidth, 
+plt.bar(br2, ResNet50_bar, color ='b', width = barWidth, 
         edgecolor ='grey', label ='ViT')
+
+# Adding values on top of the bars
+for i in range(len(AlexNet_bar)):
+    # Runde die Werte auf 4 Dezimalstellen und platziere sie direkt auf den Balken
+    plt.text(br1[i], AlexNet_bar[i], f'{round(AlexNet_bar[i], 4)}', ha='center', fontsize=18)
+    plt.text(br2[i], ResNet50_bar[i], f'{round(ResNet50_bar[i], 4)}', ha='center', fontsize=18)
+    plt.text(br3[i], ViT_bar[i], f'{round(ViT_bar[i], 4)}', ha='center', fontsize=18)
 
 
 # Adding Xticks 
+<<<<<<< HEAD
 plt.xlabel('Comparison of the classification methods in the testing stage', fontweight ='bold', fontsize = 15) 
-plt.ylabel('values', fontweight ='bold', fontsize = 15) 
+plt.ylabel('Accuracy', fontweight ='bold', fontsize = 15) 
+=======
+plt.xlabel('Comparison of the classification methods in the testing stage', fontweight ='bold', fontsize = 24) 
+plt.ylabel('values', fontweight ='bold', fontsize = 24) 
+>>>>>>> c7313e9ca41f682bd41045595fcaed668929fcb7
 plt.xticks([r + barWidth for r in range(len(AlexNet_bar))], 
-        ['F-Measure', 'Accuracy', 'Precision', 'Recall'])
+        ['F-Measure', 'Accuracy', 'Precision'], fontsize = 24)
 
-plt.legend()
+# Setze die Schriftgröße für die Ticks auf der x- und y-Achse
+plt.yticks(fontsize=24)  # Ändere die Schriftgröße für die y-Achse
+
+# Set larger font for legend and labels
+plt.legend(fontsize=24, bbox_to_anchor=(0.98, 1), loc='upper left')
 plt.show() 
 plt.clf()  # Löscht die Figur für den nächsten Plot
 
+"""
 
 ###################################################################################################
 ### Evaluation: ResNet50
@@ -621,16 +595,16 @@ if False:
     plt.clf()  # Löscht die Figur für den nächsten Plot
 
 
-# Confusion Matrix: AlexNet
-conf_matrix_alexNet = confusion_matrix(all_labels_alexNet, all_preds_alexNet)
+    # Confusion Matrix: AlexNet
+    conf_matrix_alexNet = confusion_matrix(all_labels_alexNet, all_preds_alexNet)
 
-# Visualisierung der Confusion Matrix
-plt.figure(figsize=(10, 7))
-sns.heatmap(conf_matrix_alexNet, annot=True, fmt='g', cmap='Blues', cbar=False)
-plt.title('Confusion Matrix AlexNet')
-plt.xlabel('Predicted labels')
-plt.ylabel('True labels')
-plt.show()
+    # Visualisierung der Confusion Matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix_alexNet, annot=True, fmt='g', cmap='Blues', cbar=False)
+    plt.title('Confusion Matrix AlexNet')
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.show()
 
 
 if False:
@@ -647,5 +621,3 @@ if False:
     plt.show()
 
     plt.clf()  # Löscht die Figur für den nächsten Plot
-
-
