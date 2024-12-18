@@ -2,6 +2,7 @@ import os
 import cv2
 import mediapipe as mp
 
+
 def image_processing(input_folder, output_folder):
     # MediaPipe Hand Modul initialisieren
     mp_hands = mp.solutions.hands
