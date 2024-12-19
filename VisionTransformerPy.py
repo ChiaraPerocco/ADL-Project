@@ -27,6 +27,7 @@ from torchvision.utils import save_image
 #from torchcam.methods import SmoothGradCAMpp
 #from torchcam.utils import overlay_mask
 import matplotlib.pyplot as plt
+import copy
 #from Augmentation import AugmentHandFocus
 
 import os
@@ -51,33 +52,6 @@ print(device)
 # Erstelle den Ordner, falls er nicht existiert
 #os.makedirs(save_augmented_dir, exist_ok=True)
 
-#######################################################################################
-#
-# source: https://www.geeksforgeeks.org/how-to-handle-overfitting-in-pytorch-models-using-early-stopping/
-#
-#######################################################################################
-class EarlyStopping:
-    def __init__(self, patience=5, delta=0):
-        """
-        :param patience: Anzahl der Epochen, die abgewartet werden, bevor das Training gestoppt wird, wenn der Validierungsverlust nicht besser wird
-        :param delta: Minimaler Verbesserungshöhe des Verlusts, um als "besser" betrachtet zu werden
-        """
-        self.patience = patience
-        self.delta = delta
-        self.counter = 0
-        self.best_loss = None
-        self.early_stop = False
-
-    def __call__(self, val_loss):
-        if self.best_loss is None:
-            self.best_loss = val_loss
-        elif val_loss < self.best_loss - self.delta:
-            self.best_loss = val_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.early_stop = True
 
 
 
@@ -171,7 +145,7 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-batch_size = 64
+batch_size = 32
 learning_rate = 10**-4
 num_epochs = 30
 
@@ -321,8 +295,13 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     val_accuracies = []
 
     # Initialisiere EarlyStopping
-    early_stopping = EarlyStopping(patience=5, delta=0.001)
+    #early_stopping = EarlyStopping(patience=5, delta=0.001)
     
+    #Initialize Variables for EarlyStopping
+    best_loss = float('inf')
+    best_model_weights = None
+    patience = 5
+
     # Trainiere das Modell mit den besten Hyperparametern
     for epoch in range(num_epochs):
         model.train()
@@ -374,11 +353,20 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         val_losses.append(val_loss)
         val_accuracies.append(val_acc.item())
 
-        # Prüfe auf Early Stopping
-        early_stopping(val_loss)
-        if early_stopping.early_stop:
-            print("Early stopping triggered")
-            break
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss:.4f}, Accuracy: {val_acc:.4f}")
+
+        # Early stopping
+        if val_loss < best_loss:
+            best_loss = val_loss
+            best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
+            patience = patience  # Reset patience counter
+        else:
+            patience -= 1
+            if patience == 0:
+                break
+
+    # Load the best model weights
+    model.load_state_dict(best_model_weights)
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
 
@@ -396,7 +384,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     # Create the folder if it doesn't exist
     os.makedirs(eval_folder_path, exist_ok=True)    # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values_dataset2_2.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values_dataset2_3.pth"))
 
     return model
 
@@ -458,7 +446,7 @@ if False:
     # test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'ViT_model_dataset2_2.pth')
+torch.save(final_model, 'ViT_model_dataset2_3.pth')
 ###################################################################################################
 #
 # Saliency Maps with Grad-CAM
@@ -655,7 +643,7 @@ def compute_saliency_and_save():
 #if __name__ == "__main__":
 # Create folder to saliency maps
 #save_path = PATH + 'results/'
-save_path = os.path.join(current_dir, "Saliency Maps", "results_ViT_Dataset2_2")
+save_path = os.path.join(current_dir, "Saliency Maps", "results_ViT_Dataset2_3")
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
