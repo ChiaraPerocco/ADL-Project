@@ -145,7 +145,7 @@ class AlexNet(nn.Module):
         return out
     
 batch_size = 32
-learning_rate = 10**-5
+learning_rate = 10**-4
 num_epochs = 50
 
 best_params = {

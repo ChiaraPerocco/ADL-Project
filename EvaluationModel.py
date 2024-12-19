@@ -87,7 +87,7 @@ print(device)
 
 ### Import the models
 resnet50_model = torch.load('resnet50_model_dataset2.pth', map_location=torch.device('cpu'))
-alexnet_model = torch.load('alexnet_model.pth', map_location=torch.device('cpu'))
+alexnet_model = torch.load('alexnet_model_dataset2_3.pth', map_location=torch.device('cpu'))
 ViT_model = torch.load('ViT_model_dataset2.pth', map_location=torch.device('cpu'))
 
 
@@ -120,7 +120,7 @@ print(epochs)
 #
 ###################################################################################################
 ### Import validation accuracy 
-alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values.pth"))
+alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_3.pth"))
 # Retrieve saved variables
 alexNet_hyper_params = alexNet_params['hyper_params']
 alexNet_num_epoch = alexNet_hyper_params['num_epochs']
