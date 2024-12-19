@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 from sklearn.metrics import precision_recall_fscore_support
 import os
+
 os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
 
 
@@ -33,6 +34,9 @@ output_folder = os.path.join(current_dir, "webcam_images_processed")
 
 # Erstelle den Zielordner, falls er nicht existiert
 os.makedirs(output_folder, exist_ok=True)
+
+# Aufnahme des Kamerabildes
+#save_frame_camera_key('camera capture', dir_path=input_folder)
 
 # Check if the directory contains any files and delete them if necessary
 # Alle .jpg-Dateien im Ordner löschen
