@@ -20,6 +20,7 @@ from sklearn.metrics import precision_recall_fscore_support
 import optuna
 import os
 import copy
+import wandb
 
 # Absolut path of current script
 current_dir = os.path.dirname(__file__)
@@ -118,14 +119,24 @@ def get_test_loader(data_dir,
     return test_loader
 
 batch_size = 32
-learning_rate = 10**-4
-num_epochs = 30
+learning_rate = 10**-3
+num_epochs = 50
 
 best_params = {
     'batch_size': batch_size,
     'learning_rate': learning_rate,
     'num_epochs': num_epochs
 }
+
+# Start a W&B Run with wandb.init
+run_wandb = wandb.init(project="resnet50_model_dataset2_4", 
+                       config={
+                           "batch_size": batch_size,
+                           "epochs": num_epochs,
+                           "learning_rate": learning_rate
+                       })
+
+
 
 if False:
     # Optuna objective function for hyperparameter tuning
@@ -251,9 +262,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Move the final fully connected layer to the device
     model = model.to(device)
 
+    # Überwacht das Modell und protokolliert Gradienten und Gewichte
+    wandb.watch(model, log="all")  
+
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate, weight_decay = 0.005)
 
     # Initialize lists to track loss and accuracy for all epochs
     train_losses = []
@@ -319,14 +333,20 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         print(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
 
+        # log metrics to wandb
+        wandb.log({"train acc": epoch_acc, "train loss": epoch_loss,
+                   "val acc": val_acc, "val loss": val_loss})
+
         # Prüfe auf Early Stopping
         # Early stopping
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
             patience = 5  # Reset patience counter
+            print(f"Patience val_loss < best_loss {patience}")
         else:
             patience -= 1
+            print(f"Patience val_loss > best_loss {patience}")
             if patience == 0:
                 break
     # Load the best model weights
@@ -334,6 +354,8 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
+    # Beende das wandb-Projekt
+    wandb.finish()
 
     # Save the training and validation metrics for all epochs
     checkpoint = {
@@ -351,7 +373,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     os.makedirs(eval_folder_path, exist_ok=True)
     
     # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2_3.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2_4.pth"))
 
 
     return model
@@ -415,7 +437,7 @@ def test_model(model, test_loader):
 test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'resnet50_model_dataset2_3.pth')
+torch.save(final_model, 'resnet50_model_dataset2_4.pth')
 
 ###################################################################################################
 #
@@ -606,7 +628,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results_resnet_dataset2_3")
+save_path = os.path.join(current_dir, "Saliency Maps_resnet_dataset2_4", "results_resnet_dataset2_4")
 os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()

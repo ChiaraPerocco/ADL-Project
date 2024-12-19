@@ -337,8 +337,8 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     model = AlexNet(num_classes).to(device)
 
     # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
+    #criterion = nn.CrossEntropyLoss()
+    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
 
     # Train the model
     total_step = len(train_loader)
@@ -347,7 +347,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)
 
     # Initialize lists to track loss and accuracy for all epochs
     train_losses = []
