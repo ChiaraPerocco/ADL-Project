@@ -38,13 +38,13 @@ print(current_dir)
 
 # Pfade definieren
 dataset = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\datasetSL\ASL_Alphabet_Dataset\asl_alphabet_train"
-output_folder = os.path.join(current_dir, "Sign Language")
+output_folder = os.path.join(current_dir, "Sign Language 2")
 
 # Anzahl der Bilder pro Klasse
 num_images_per_class = 500
 
 # Temporärer Ordner für reduzierte Datenmenge
-temp_dataset = os.path.join(output_folder, 'temp_dataset_1')
+temp_dataset = os.path.join(output_folder, 'temp_dataset_2')
 
 for class_folder in os.listdir(dataset):
     class_path = os.path.join(dataset, class_folder)
@@ -67,9 +67,9 @@ for class_folder in os.listdir(dataset):
 splitfolders.ratio(temp_dataset, output=output_folder, seed=1337, ratio=(.8, 0.1, 0.1))
 
 # Definierung der Pfade für train, val und test
-dataset_train = os.path.join(output_folder, 'train_1')
-dataset_val = os.path.join(output_folder, 'val_1')
-dataset_test = os.path.join(output_folder, 'test_1')
+dataset_train = os.path.join(output_folder, 'train_2')
+dataset_val = os.path.join(output_folder, 'val_2')
+dataset_test = os.path.join(output_folder, 'test_2')
 
 print(f"Train Pfad: {dataset_train}")
 print(f"Val Pfad: {dataset_val}")
