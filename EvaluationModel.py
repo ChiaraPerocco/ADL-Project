@@ -87,10 +87,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
 ### Import the models
-#resnet50_model = torch.load('resnet50_model_dataset2.pth', map_location=torch.device('cpu'))
+#resnet50_model = torch.load('resnet50_model_dataset2_2.pth', map_location=torch.device('cpu'))
 #alexnet_model = torch.load('alexnet_model_dataset2_2.pth', map_location=torch.device('cpu'))
 #ViT_model = torch.load('ViT_model_dataset2_2.pth', map_location=torch.device('cpu'))
 ViT_model = torch.load('ViT_model_dataset2_2.pth')
+resnet50_model = torch.load('resnet50_model_dataset2_2.pth')
 
 
 ###################################################################################################
@@ -98,9 +99,9 @@ ViT_model = torch.load('ViT_model_dataset2_2.pth')
 # Test model on resnet50 model
 #
 ###################################################################################################
-if False:
+if True:
     ### Import validation accuracy 
-    resnet50_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2.pth"))
+    resnet50_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2_2.pth"))
     # Retrieve saved variables
     resnet50_hyper_params = resnet50_params['hyper_params']
     resnet50_num_epoch = resnet50_hyper_params['num_epochs']
@@ -334,7 +335,7 @@ if True:
 #
 ###################################################################################################
 # get test loader
-if False:
+if True:
     def get_test_loader(data_dir,
                         batch_size,
                         shuffle=True):
@@ -452,7 +453,7 @@ if False:
 ###################################################################################################
 ### Evaluation: ResNet50
 ###################################################################################################
-if False:
+if True:
     ### Confusion Matrix:
     conf_matrix_resNet50 = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
 
@@ -476,6 +477,7 @@ if False:
     plt.plot(epochs, resnet50_val_acc, label = "validation accuracy")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
+    plt.title("ResNet50")
     plt.legend()
     plt.show()
 
@@ -529,6 +531,7 @@ if False:
     plt.plot(epochs, alexNet_val_acc, label = "validation accuracy")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
+    plt.title("AlexNet")
     plt.legend()
     plt.show()
 
@@ -582,6 +585,7 @@ if True:
     plt.plot(epochs, ViT_val_acc, label = "validation accuracy")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
+    plt.title("Vision Transformer")
     plt.legend()
     plt.show()
 
@@ -612,7 +616,7 @@ if True:
 ###Confusion Matrix
 ###################################################################################################
 # Confusion Matrix: ResNet50
-if False:
+if True:
     conf_matrix_resNet50 = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
 
     # Visualisierung der Confusion Matrix
