@@ -39,7 +39,7 @@ os.makedirs(output_folder, exist_ok=True)
 for datei in os.listdir(output_folder):
     if datei.lower().endswith('.jpg'):
         os.remove(os.path.join(output_folder, datei))
-        
+
 # Process image
 # Aufruf der Funktion aus dem anderen Skript
 image_processing(input_folder, output_folder)
@@ -49,7 +49,7 @@ dir_path = os.path.join(current_dir, "webcam_images_processed")
 
 # Load Hyperparameters
 # AlexNet
-alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values.pth"))
+alexNet_params = torch.load(os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_3.pth"))
 alexNet_hyper_params = alexNet_params['hyper_params']
 alexNet_batch_size = alexNet_hyper_params['batch_size']
 print(alexNet_batch_size)
@@ -193,7 +193,7 @@ def test_model(model, test_loader):
 batch_size = 64 # need to include hyperparameters
 ViT = torch.load('ViT_model_dataset2.pth', map_location=torch.device('cpu'), weights_only=False)
 ResNet = torch.load('resnet50_model_dataset2.pth', map_location=torch.device('cpu'), weights_only=False)
-AlexNet_model = torch.load('alexnet_model_dataset2_2.pth', map_location=torch.device('cpu'), weights_only=False)
+AlexNet_model = torch.load('alexnet_model_dataset2_3.pth', map_location=torch.device('cpu'), weights_only=False)
 
 
 

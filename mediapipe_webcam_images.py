@@ -58,7 +58,8 @@ def image_processing(input_folder, output_folder):
 
                 else:
                     # Falls keine Hand erkannt wird, speichere nur das Originalbild
-                    original_output_path = os.path.join(target_subfolder, f"original_{image_name}")
-                    cv2.imwrite(original_output_path, image)
+                    #original_output_path = os.path.join(target_subfolder, f"original_{image_name}")
+                    #cv2.imwrite(original_output_path, image)
+                    print("Hand wurde nicht erkannt. Nehme noch ein Foto auf.")
 
     print("Verarbeitung abgeschlossen!")

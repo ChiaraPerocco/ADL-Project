@@ -108,64 +108,6 @@ print(pubmed_tool.invoke("sign language"))
 
 tool_names = [tool.name for tool in tools]
 
-# Set up the prompt with input variables for tools, user input and a scratchpad for the model to record its workings
-template_kopie = """Answer the following questions in a structured format. You can use the following tool:
-
-{tools}
-
-Your task is to write a detailed, well-organized response of approximately 500 words about the topic of sign language. Structure your response into four paragraphs, with each paragraph focusing on a specific aspect of sign language:
-
-1. **History**: Provide an overview of the origins and historical development of sign language.
-2. **Importance**: Explain why sign language is essential for communication and inclusivity, and its impact on the Deaf community.
-3. **Applications**: Discuss how sign language is used in education, technology, and everyday life.
-4. **Future**: Explore potential advancements and future trends in the use of sign language.
-
-To answer, follow this format:
-
-Question: {input}
-Action: <the tool you want to use>
-Action Input: <the input for the tool>
-Observation: <the tool's output>
-... (repeat Action/Action Input/Observation as needed)
-Final Answer: <your final answer here, structured as described above>
-
-Begin!
-
-Question: {input}
-{agent_scratchpad}"""
-
-template = """
-You are tasked with answering a question using the tools provided. Your goal is to write a cohesive article structured into four paragraphs, covering:
-
-1. **History**: Provide an overview of the origins and historical development of sign language.
-2. **Importance**: Explain why sign language is essential for communication and inclusivity, and its impact on the Deaf community.
-3. **Applications**: Discuss how sign language is used in education, technology, and everyday life.
-4. **Future**: Explore potential advancements and future trends in the use of sign language.
-
-Follow this process:
-
-1. Use tools to gather relevant information.
-2. Write a cohesive article based on the observations.
-
-### Response Format:
-
-Question: {input}
-
-Step 1: Use tools to gather information.
-Action: the action to take, should be one of [{tool_names}]
-Action Input: <Query>
-Observation: <Tool's Response>
-...(Repeat as necessary)...
-
-Step 2: Write the article.
-Final Answer: <Cohesive article structured as described.>
-
-Begin:
-
-Question: {input}
-{agent_scratchpad}
-"""
-
 # Set up a prompt template
 class CustomPromptTemplate(BaseChatPromptTemplate):
     # The template to use
@@ -234,12 +176,9 @@ class CustomOutputParser(AgentOutputParser):
 
 output_parser = CustomOutputParser()
 
-
 # Initiate our LLM
 # Load opensource llm and its tokenizer
 model_id = "openai-community/gpt2-large"
-#model_id = "HuggingFaceH4/zephyr-7b-beta"
-#device = "cuda" if torch.cuda.is_available() else "cpu"
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(model_id)
@@ -266,34 +205,65 @@ agent = LLMSingleActionAgent(
     early_stopping_method = "generate"
 )
 
-# Initiate the agent that will respond to our queries
-# Set verbose=True to share the CoT reasoning the LLM goes through
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
-response = agent_executor.invoke("What is the history of sign language?", intermediate_steps=[])
-print(response)
+
+
+# ---------------------------
+# Task Execution
+# ---------------------------
+# Initialize chat history as an empty list
+chat_history = []
+
+# Step 1: Wikipedia Query
+wiki_query = f"History of sign language"
+print("=== Wikipedia Lookup ===")
+response_wiki = agent_executor.invoke({"input": wiki_query, "chat_history": chat_history})
+wiki_output = response_wiki["output"] if "output" in response_wiki else "No Wikipedia result found."
+print(wiki_output)
+
+# Update chat history
+chat_history.append({"role": "user", "content": wiki_query})
+chat_history.append({"role": "assistant", "content": wiki_output})
+
+# Step 2: Weather Query
+print("\n=== Pubmed Lookup ===")
+response_weather = agent.invoke({"input": f"History of sign language", "chat_history": chat_history})
+weather_output = response_weather["output"] if "output" in response_weather else "No weather result found."
+print(weather_output)
+
+# Update chat history
+chat_history.append({"role": "user", "content": f"weather in {random_city}"})
+chat_history.append({"role": "assistant", "content": weather_output})
+
+# Step 3: Story Generation
+detected_letter = ["A"]
+
+prompt = f"""
+Write a funny fictive story about an office accident with everyday office objects in {random_city}.
+The objects involved are: {detected_letter}. 
+The accident should be exaggerated and unrealistic.
+Use 2 or 3 key parts of the following current weather information: '{weather_output}' as part of the accident story.
+Include one or two tourist attraction: '{wiki_output}' in the story.
+Add funny warning labels at the end for what to be careful when dealing with the office objects. Limit the story to 300 words.
+"""
+
+print("\n=== Generating Story ===")
+response_story = agent.invoke({"input": prompt, "chat_history": chat_history})
+story_output = response_story["output"] if "output" in response_story else "Failed to generate a story."
+print(story_output)
+
+# Update chat history
+chat_history.append({"role": "user", "content": prompt})
+chat_history.append({"role": "assistant", "content": story_output})
+
+
+# Initiate the agent that will respond to our queries
+# Set verbose=True to share the CoT reasoning the LLM goes through
 
 final_response = response["output"]  # Extract the final response
 print("Final Response:", final_response)
 
-#answer = final_response
-# Use a regex to capture everything after "Answer:"
-#match = re.search(r"Answer:(.*)", final_response, re.DOTALL)
-
-#if match:
-    # Extract the part after "Answer:"
-#    answer = match.group(1).strip()  # .strip() to remove leading/trailing whitespace
-
-    # Ensure the answer is in string format
-#    if isinstance(answer, str):
-#        print("Answer is a string:")
-#        print(answer)
-#    else:
-#        print("Answer is not a string. Converting to string.")
-#        answer = str(answer)  # Convert to string if needed
-#        print(answer)
-#else:
-#    print("No answer found.")
 
 from fpdf import FPDF  # pip install fpdf
 
