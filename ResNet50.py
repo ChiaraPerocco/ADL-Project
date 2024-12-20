@@ -15,6 +15,7 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torchvision.models import resnet50, ResNet50_Weights
+from torch.optim.lr_scheduler import OneCycleLR
 import torch.optim as optim
 from sklearn.metrics import precision_recall_fscore_support
 import optuna
@@ -119,7 +120,7 @@ def get_test_loader(data_dir,
     return test_loader
 
 batch_size = 32
-learning_rate = 5*10**-5
+learning_rate = 0.1
 num_epochs = 50
 
 best_params = {
@@ -129,7 +130,7 @@ best_params = {
 }
 
 # Start a W&B Run with wandb.init
-run_wandb = wandb.init(project="resnet50_model_dataset2_4", 
+run_wandb = wandb.init(project="resnet50_model_dataset2_5", 
                        config={
                            "batch_size": batch_size,
                            "epochs": num_epochs,
@@ -257,8 +258,11 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         param.requires_grad = True
 
     # Replace last layer (final fully connected layer (classifier))
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
-
+    #model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    model.fc = nn.Sequential(
+        nn.Dropout(p=0.5),  # Dropout added
+        nn.Linear(model.fc.in_features, num_classes)
+    )
     # Move the final fully connected layer to the device
     model = model.to(device)
 
@@ -266,9 +270,30 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     wandb.watch(model, log="all")  
 
     # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate, weight_decay = 0.005)
+    #criterion = nn.CrossEntropyLoss()
+    #optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate, weight_decay = 0.005)
 
+    # Define the loss function
+    criterion = nn.CrossEntropyLoss()
+    # Define the optimizer (SGD)
+    optimizer = optim.SGD(model.fc.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.005)
+
+    # Define OneCycleLR scheduler
+    scheduler = OneCycleLR(
+        optimizer,
+        max_lr=0.1,  # The maximum learning rate
+        steps_per_epoch=len(train_loader),
+        epochs=num_epochs,
+        pct_start=0.3,  # Percentage of the cycle/epochs for increasing LR
+        anneal_strategy='cos',  # Cosine annealing after max LR
+        cycle_momentum=True, # Aktiviert die zyklische Anpassung des Momentums
+        base_momentum=0.85, # Anfangswert des Momentums
+        max_momentum=0.95, # Endwert des Momentums
+        div_factor=25.0,  # Initial LR is max_lr / div_factor
+        final_div_factor=10000.0  # Final LR is max_lr / final_div_factor
+    )
+
+    
     # Initialize lists to track loss and accuracy for all epochs
     train_losses = []
     train_accuracies = []
@@ -279,12 +304,23 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     best_loss = float('inf')
     best_model_weights = None
     patience = 5
+    patience_counter = patience
 
+    # Funktion, um die aktuelle Lernrate aus dem Optimizer abzurufen
+    def get_lr(optimizer):
+        for param_group in optimizer.param_groups:
+            return param_group['lr']
+        
     # Train the model with the best hyperparameters
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
         running_corrects = 0
+
+        # Aktuelle Lernrate ausgeben
+        current_lr = get_lr(optimizer)
+        print(f"Epoch {epoch+1}/{num_epochs}, Current Learning Rate: {current_lr:.6f}")
+
         for inputs, labels in train_loader:
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -295,6 +331,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step() # Update the learing rate
 
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
@@ -335,27 +372,28 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         # log metrics to wandb
         wandb.log({"train acc": epoch_acc, "train loss": epoch_loss,
-                   "val acc": val_acc, "val loss": val_loss})
+                   "val acc": val_acc, "val loss": val_loss,
+                   "lr": scheduler.get_last_lr()[0],
+                   "momentum": optimizer.param_groups[0]['momentum']})
 
         # Prüfe auf Early Stopping
         # Early stopping
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
-            patience = 5  # Reset patience counter
-            print(f"Patience val_loss < best_loss {patience}")
+            patience_counter = patience  # Reset patience counter
+            print(f"Patience:{patience} (val_loss < best_loss)")
         else:
-            patience -= 1
-            print(f"Patience val_loss > best_loss {patience}")
-            if patience == 0:
+            patience_counter -= 1
+            print(f"Patience:{patience} (val_loss > best_loss)")
+            if patience_counter == 0:
+                print("Early Stopping")
                 break
     # Load the best model weights
     model.load_state_dict(best_model_weights)
     
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
-    # Beende das wandb-Projekt
-    wandb.finish()
 
     # Save the training and validation metrics for all epochs
     checkpoint = {
@@ -375,7 +413,9 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Save the checkpoint
     torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2_4.pth"))
 
-
+    # Beende das wandb-Projekt
+    wandb.finish()
+    
     return model
 
 # Train the final model with the best hyperparameters
