@@ -7,353 +7,183 @@
 # source: https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
 #
 ###############################################################################################
-# Import packages
-import numpy as np
+import os
+import copy
 import torch
+import wandb
+import torch.optim as optim
 import torch.nn as nn
+from torch.optim.lr_scheduler import OneCycleLR
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torchvision.models import resnet50, ResNet50_Weights
-from torch.optim.lr_scheduler import OneCycleLR
-import torch.optim as optim
-from sklearn.metrics import precision_recall_fscore_support
-import optuna
-import os
-import copy
-import wandb
 
-# Absolut path of current script
+
+# Absoluter Pfad des aktuellen Skripts
 current_dir = os.path.dirname(__file__)
 print(current_dir)
 
-# relative path of data sets
+# Verzeichnisse der Datensätze
 dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
 dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
 dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 
-# Number of classes in data set
+# Anzahl der Klassen im Datensatz
 num_classes = 26
 
-# Device configuration
+# Geräte-Konfiguration (CPU oder GPU)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 
 
-def get_train_valid_loader(data_dir_train, #Verzeichnis, in dem der Datensatz gespeichert wird (oder heruntergeladen werden soll).
-                           data_dir_valid,
-                           batch_size, #Anzahl der Bilder pro Batch (Mini-Batch) während des Trainings oder der Validierung.
-                           augment, #Boolescher Wert, der angibt, ob Datenaugmentation verwendet werden soll (z. B. zufälliges Beschneiden oder Spiegeln der Bilder).
-                           shuffle=True): # Ob die Daten vor dem Aufteilen in Trainings- und Validierungssets zufällig gemischt werden sollen
-    normalize = transforms.Normalize(
-        mean=[0.4914, 0.4822, 0.4465],
-        std=[0.2023, 0.1994, 0.2010],
-    )
-
-    # Transformation for validating data set
-    valid_transform = transforms.Compose([
-        transforms.Resize((224, 224)), # Ändern der Größe auf 224x224 Pixel
-        transforms.ToTensor(), # Umwandlung in einen Tensor
-        normalize,
-    ])
-
-    # Augmentierung für Trainingsdaten (falls aktiviert)
+# Datenloader für Trainings- und Validierungsdatensätze
+def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
+    normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+    
+    # Transformation für den Validierungsdatensatz
+    valid_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize])
+    
+    # Transformation für Trainingsdaten mit Datenaugmentation
     if augment:
         train_transform = transforms.Compose([
             transforms.Resize((256, 256)),
             transforms.RandomCrop(224, padding=4),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(15),                # Random rotation between -15 to 15 degrees
-            transforms.ColorJitter(brightness=0.2,        # Random color variations
-                                contrast=0.2, 
-                                saturation=0.2, 
-                                hue=0.1),
-            transforms.RandomAffine(degrees=0,            # Random affine transformations (scale, shear)
-                                    translate=(0.1, 0.1), 
-                                    scale=(0.9, 1.1), 
-                                    shear=10),
-            transforms.RandomGrayscale(p=0.1),            # Randomly convert images to grayscale
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=10),
+            transforms.RandomGrayscale(p=0.1),
             transforms.ToTensor(),
-            normalize,
+            normalize
         ])
-        
     else:
-        train_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            normalize,
-        ])
+        train_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize])
 
-    # Lade den Trainingsdatensatz (ImageFolder passt zur Ordnerstruktur)
+    # Lade den Trainings- und Validierungsdatensatz
     train_dataset = datasets.ImageFolder(root=data_dir_train, transform=train_transform)
-
-    # Lade den Validierungsdatensatz (separate Validierungsdaten)
     valid_dataset = datasets.ImageFolder(root=data_dir_valid, transform=valid_transform)
 
-    # DataLoader für Training und Validierung
+    # Erstelle DataLoader für Training und Validierung
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, valid_loader
 
-def get_test_loader(data_dir,
-                    batch_size,
-                    shuffle=True):
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225],
-    )
-
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),   #Bildgröße anpassen
-        transforms.ToTensor(),
-        normalize,
-    ])
-    
-
-    # Lade den Testdatensatz
+def get_test_loader(data_dir, batch_size, shuffle=True):
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize])
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-
-    # Erstellen des DataLoaders für Testdaten
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
-
     return test_loader
 
-batch_size = 32
-learning_rate = 0.1
-num_epochs = 50
 
+# Erstelle die besten Hyperparameter als Dictionary
 best_params = {
-    'batch_size': batch_size,
-    'learning_rate': learning_rate,
-    'num_epochs': num_epochs
+    'learning_rate': 0.1,  # Beispielwert
+    'batch_size': 64,      # Beispielwert
+    'num_epochs': 50       # Beispielwert
 }
 
-# Start a W&B Run with wandb.init
-run_wandb = wandb.init(project="resnet50_model_dataset2_5", 
-                       config={
-                           "batch_size": batch_size,
-                           "epochs": num_epochs,
-                           "learning_rate": learning_rate
-                       })
 
-
-
-if False:
-    # Optuna objective function for hyperparameter tuning
-    # https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
-    def objective(trial):
-        # Suggest hyperparameters
-        learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
-        batch_size = trial.suggest_categorical('batch_size', [64])
-        num_epochs = trial.suggest_int('num_epochs', 10, 10)
-
-        # Load data with current batch size
-        train_loader, valid_loader = get_train_valid_loader(
-            data_dir_train=dataset_train,
-            data_dir_valid=dataset_val,
-            batch_size=batch_size,
-            augment=True,
-            shuffle=True
-        )
-
-        # Load pretrained model
-        # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
-        model = resnet50(weights=ResNet50_Weights.DEFAULT)
-
-        # Freeze all layers
-        for param in model.parameters():
-            param.requires_grad = False
-
-        # Unfreeze last layer
-        for param in model.fc.parameters():
-            param.requires_grad = True
-
-        # Replace last layer (final fully connected layer (classifier)
-        model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
-
-        # Move the final fully connected layer to the device
-        model = model.to(device)
-
-        # Loss and optimizer
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
-        
-        model.train()
-        for epoch in range(num_epochs):
-            running_loss = 0.0
-            running_corrects = 0
-            for inputs, labels in train_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
-
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
-
-                epoch_loss = running_loss / len(train_loader.dataset)
-                epoch_acc = running_corrects.double() / len(train_loader.dataset)
-
-        model.eval()
-        val_loss = 0.0
-        val_corrects = 0
-        with torch.no_grad():
-            for inputs, labels in valid_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                    
-                val_loss += loss.item() * inputs.size(0)
-                val_corrects += torch.sum(preds == labels.data)
-
-            val_loss = val_loss / len(valid_loader.dataset)
-            val_acc = val_corrects.double() / len(valid_loader.dataset)
-            
-            return val_acc
-
-    # Run the Optuna study
-    study = optuna.create_study(direction="maximize") # is it minimize or maximize
-    study.optimize(objective, n_trials=1)
-
-    # Print the best hyperparameters
-    best_params = study.best_params
-    print("Beste Hyperparameter:", best_params)
-    print("Bester Validierungsverlust:", study.best_value)
-
-# Use the best hyperparameters to train the final model
+# Trainiere das finale Modell mit den besten Hyperparametern
 def train_final_model(best_params, dataset_train, dataset_val, device):
-    # Extract the hyperparameters
     learning_rate = best_params['learning_rate']
     batch_size = best_params['batch_size']
     num_epochs = best_params['num_epochs']
     
-    # Load the training and validation data with the best batch size
-    train_loader, valid_loader = get_train_valid_loader(
-        data_dir_train=dataset_train,
-        data_dir_valid=dataset_val,
-        batch_size=batch_size,
-        augment=True,
-        shuffle=True
-    )
+    # Lade Trainings- und Validierungsdatensatz
+    train_loader, valid_loader = get_train_valid_loader(dataset_train, dataset_val, batch_size, augment=True, shuffle=True)
     
-    # Load pretrained model
-    # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
+    # Lade das vortrainierte Modell ResNet50
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-
-    # Freeze all layers
+    
+    # Alle Schichten einfrieren, außer der letzten
     for param in model.parameters():
         param.requires_grad = False
-
-    # Unfreeze last layer
     for param in model.fc.parameters():
         param.requires_grad = True
-
-    # Replace last layer (final fully connected layer (classifier))
-    #model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    
+    # Ersetze die letzte Schicht (Fully Connected Layer)
     model.fc = nn.Sequential(
-        nn.Dropout(p=0.5),  # Dropout added
+        nn.Dropout(p=0.5),  # Dropout hinzugefügt
         nn.Linear(model.fc.in_features, num_classes)
     )
-    # Move the final fully connected layer to the device
+    
     model = model.to(device)
-
-    # Überwacht das Modell und protokolliert Gradienten und Gewichte
+    
+    # Wandb zur Überwachung
     wandb.watch(model, log="all")  
-
-    # Loss and optimizer
-    #criterion = nn.CrossEntropyLoss()
-    #optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate, weight_decay = 0.005)
-
-    # Define the loss function
+    
+    # Verlustfunktion und Optimierer
     criterion = nn.CrossEntropyLoss()
-    # Define the optimizer (SGD)
     optimizer = optim.SGD(model.fc.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.005)
 
-    # Define OneCycleLR scheduler
+    # Scheduler für OneCycleLR
     scheduler = OneCycleLR(
-        optimizer,
-        max_lr=0.1,  # The maximum learning rate
-        steps_per_epoch=len(train_loader),
-        epochs=num_epochs,
-        pct_start=0.3,  # Percentage of the cycle/epochs for increasing LR
-        anneal_strategy='cos',  # Cosine annealing after max LR
-        cycle_momentum=True, # Aktiviert die zyklische Anpassung des Momentums
-        base_momentum=0.85, # Anfangswert des Momentums
-        max_momentum=0.95, # Endwert des Momentums
-        div_factor=25.0,  # Initial LR is max_lr / div_factor
-        final_div_factor=10000.0  # Final LR is max_lr / final_div_factor
+        optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=num_epochs,
+        pct_start=0.3, anneal_strategy='cos', cycle_momentum=True,
+        base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0
     )
 
-    
-    # Initialize lists to track loss and accuracy for all epochs
-    train_losses = []
-    train_accuracies = []
-    val_losses = []
-    val_accuracies = []
-
-    #Initialize Variables for EarlyStopping
+    # Variablen für Metriken und EarlyStopping
     best_loss = float('inf')
     best_model_weights = None
     patience = 5
     patience_counter = patience
-
-    # Funktion, um die aktuelle Lernrate aus dem Optimizer abzurufen
+    train_losses, train_accuracies = [], []
+    val_losses, val_accuracies = [], []
+    
+    # Funktion, um die Lernrate zu bekommen
     def get_lr(optimizer):
         for param_group in optimizer.param_groups:
             return param_group['lr']
-        
-    # Train the model with the best hyperparameters
+
+    # Funktion, um das Momentum zu bekommen
+    def get_momentum(optimizer):
+        return optimizer.param_groups[0]['momentum']
+
+    # Beste Lernrate und Momentum speichern
+    best_lr = None
+    best_momentum = None
+
+    # Trainingsloop
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
         running_corrects = 0
 
-        # Aktuelle Lernrate ausgeben
         current_lr = get_lr(optimizer)
-        print(f"Epoch {epoch+1}/{num_epochs}, Current Learning Rate: {current_lr:.6f}")
+        current_momentum = get_momentum(optimizer)
+        print(f"Epoch {epoch+1}/{num_epochs}, Current Learning Rate: {current_lr:.6f}, Current Momentum: {current_momentum:.6f}")
 
         for inputs, labels in train_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-
+            inputs, labels = inputs.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            scheduler.step() # Update the learing rate
+            scheduler.step()
 
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = running_corrects.double() / len(train_loader.dataset)
-
-        # Store the training loss and accuracy for this epoch
         train_losses.append(epoch_loss)
         train_accuracies.append(epoch_acc.item())
 
-        print(f"Epoch {epoch+1}/{num_epochs}, Training Loss: {epoch_loss:.4f}, Training Accuracy: {epoch_acc:.4f}")
+        print(f"Training Loss: {epoch_loss:.4f}, Training Accuracy: {epoch_acc:.4f}")
 
-        # Evaluate on the validation data
+        # Validierung
         model.eval()
         val_loss = 0.0
         val_corrects = 0
         with torch.no_grad():
             for inputs, labels in valid_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-
+                inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
                 _, preds = torch.max(outputs, 1)
                 loss = criterion(outputs, labels)
@@ -363,63 +193,64 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         val_loss = val_loss / len(valid_loader.dataset)
         val_acc = val_corrects.double() / len(valid_loader.dataset)
-
-        # Store the validation loss and accuracy for this epoch
         val_losses.append(val_loss)
         val_accuracies.append(val_acc.item())
 
-        print(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
+        print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
 
-        # log metrics to wandb
-        wandb.log({"train acc": epoch_acc, "train loss": epoch_loss,
-                   "val acc": val_acc, "val loss": val_loss,
-                   "lr": scheduler.get_last_lr()[0],
-                   "momentum": optimizer.param_groups[0]['momentum']})
+        # Logge Metriken zu wandb
+        wandb.log({
+            "train acc": epoch_acc,
+            "train loss": epoch_loss,
+            "val acc": val_acc,
+            "val loss": val_loss,
+            "lr": current_lr,
+            "momentum": current_momentum
+        })
 
-        # Prüfe auf Early Stopping
-        # Early stopping
+        # Speichern der besten Lernrate und des besten Momentums bei der besten Validierungsgenauigkeit
         if val_loss < best_loss:
             best_loss = val_loss
-            best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
-            patience_counter = patience  # Reset patience counter
-            print(f"Patience:{patience} (val_loss < best_loss)")
+            best_model_weights = copy.deepcopy(model.state_dict())
+            patience_counter = patience
+            best_lr = current_lr
+            best_momentum = current_momentum
+            print(f"Best model updated with lr={best_lr:.6f}, momentum={best_momentum:.6f} (val_loss < best_loss)")
         else:
             patience_counter -= 1
-            print(f"Patience:{patience} (val_loss > best_loss)")
+            print(f"Patience: {patience} (val_loss > best_loss)")
             if patience_counter == 0:
                 print("Early Stopping")
                 break
-    # Load the best model weights
-    model.load_state_dict(best_model_weights)
-    
-    
-    print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
 
-    # Save the training and validation metrics for all epochs
+    # Modell mit den besten Gewichtungen speichern
+    model.load_state_dict(best_model_weights)
+
+    # Speichern des besten Lernraten- und Momentumwertes
     checkpoint = {
         'train_losses': train_losses,
         'train_accuracies': train_accuracies,
         'val_losses': val_losses,
         'val_accuracies': val_accuracies,
+        'best_lr': best_lr,  # Speichern der besten Lernrate
+        'best_momentum': best_momentum,  # Speichern des besten Momentums
         'hyper_params': best_params,
     }
 
-    # Define the directory path
+    # Speichern des Modells und der Metriken
     eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
-
-    # Create the folder if it doesn't exist
     os.makedirs(eval_folder_path, exist_ok=True)
-    
-    # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "resnet_values_dataset2_4.pth"))
+    torch.save(checkpoint, os.path.join(eval_folder_path, "resnet_values_dataset2_4.pth"))
 
-    # Beende das wandb-Projekt
+    # W&B beenden
     wandb.finish()
-    
+
     return model
 
-# Train the final model with the best hyperparameters
+# Trainiere das finale Modell mit den besten Hyperparametern
 final_model = train_final_model(best_params, dataset_train, dataset_val, device)
+
+
 
 # Load test data
 test_loader = get_test_loader(
@@ -446,35 +277,16 @@ def test_model(model, test_loader):
             _, preds = torch.max(outputs, 1)
             test_corrects += torch.sum(preds == labels.data)
 
-
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
             all_labels_resNet50.extend(labels.cpu().numpy())
             all_preds_resNet50.extend(preds.cpu().numpy())
 
-    # Convert numerical labels and predictions to class names
-    #true_labels = [class_names[i] for i in all_labels_resNet50]
-    #predicted_labels = [class_names[i] for i in all_preds_resNet50]
+    test_acc = test_corrects.double() / len(test_loader.dataset)
+    print(f"Test Accuracy: {test_acc:.4f}")
 
-    # Berechnung der Test Accuracy
-    test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
+    return test_acc, all_labels_resNet50, all_preds_resNet50
 
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-
-    # Berechnung von Precision, Recall und F1-Score
-    precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
-    
-    print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-    print(f'Precision: {precision_resNet50:.4f}')
-    print(f'Recall: {recall_resNet50:.4f}')
-    print(f'F1-Score: {f1_resNet50:.4f}')
-    
-    print(f'Labels Testdaten: {all_labels_resNet50}')
-    print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
-    # Rückgabe der Metriken
-    return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50
-
-# Testen auf Testdaten und Speichern der Metriken und label
-test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
+# Testen des finalen Modells
+test_acc, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Save the entire model
 torch.save(final_model, 'resnet50_model_dataset2_4.pth')
@@ -501,6 +313,9 @@ torch.save(final_model, 'resnet50_model_dataset2_4.pth')
 
 import torch.nn.functional as F
 from math import isclose
+import numpy as np
+from sklearn.metrics import precision_recall_fscore_support
+
 
 class GradCAMExtractor:
     #Extract tensors needed for Gradcam using hooks
