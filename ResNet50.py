@@ -82,7 +82,7 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
 best_params = {
     'learning_rate': 0.1,  # Beispielwert
     'batch_size': 64,      # Beispielwert
-    'num_epochs': 50       # Beispielwert
+    'num_epochs': 20       # Beispielwert
 }
 
 
@@ -112,8 +112,9 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     
     model = model.to(device)
     
-    # Wandb zur Überwachung
-    wandb.watch(model, log="all")  
+    # Initialisiere wandb und überwache
+    wandb.init(project='resnet50_model_dataset2_5', config=best_params)
+    wandb.watch(model, log="all")  # Dies funktioniert jetzt nach wandb.init()
     
     # Verlustfunktion und Optimierer
     criterion = nn.CrossEntropyLoss()
@@ -240,7 +241,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Speichern des Modells und der Metriken
     eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
     os.makedirs(eval_folder_path, exist_ok=True)
-    torch.save(checkpoint, os.path.join(eval_folder_path, "resnet_values_dataset2_4.pth"))
+    torch.save(checkpoint, os.path.join(eval_folder_path, "resnet_values_dataset2_5.pth"))
 
     # W&B beenden
     wandb.finish()
@@ -289,7 +290,7 @@ def test_model(model, test_loader):
 test_acc, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'resnet50_model_dataset2_4.pth')
+torch.save(final_model, 'resnet50_model_dataset2_5.pth')
 
 ###################################################################################################
 #
@@ -483,7 +484,7 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps_resnet_dataset2_4", "results_resnet_dataset2_4")
+save_path = os.path.join(current_dir, "Saliency Maps_resnet_dataset2_5", "results_resnet_dataset2_5")
 os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()
