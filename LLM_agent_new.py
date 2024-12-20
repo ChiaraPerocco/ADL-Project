@@ -87,12 +87,26 @@ access_token = "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"
 login(token=access_token)
 
 # Initialize the Wikipedia tool manually
-wikipedia_tool = WikipediaAPIWrapper()
-wikipedia_tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
+wikipedia_wrapper = WikipediaAPIWrapper(top_k_results=3, doc_content_chars_max=500)
+wikipedia_tool = WikipediaQueryRun(api_wrapper=wikipedia_wrapper)
 
+# Initialize Duckduckgo tool manually
+#from langchain_community.tools import DuckDuckGoSearchResults
+#from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+
+#duckduckgo_wrapper = DuckDuckGoSearchAPIWrapper(region="de-de", time="d", max_results=2)
+#duckduckgo_tool = DuckDuckGoSearchResults(api_wrapper=duckduckgo_wrapper, source="news")
+
+from langchain_community.tools.pubmed.tool import PubmedQueryRun
+pubmed_tool = PubmedQueryRun()
 # Create the tools (only using the Wikipedia tool here for example)
-tools = [Tool(name="Wikipedia", func=wikipedia_tool.run, description="Search Wikipedia for information")]
+tools = [Tool(name="Wikipedia", func=wikipedia_tool.run, description="Search Wikipedia for information"),
+         Tool(name="Pubmed", func=pubmed_tool.invoke, description="Search for information")]
+
 print(wikipedia_tool.run("History of sign language"))
+print(pubmed_tool.invoke("sign language"))
+
+tool_names = [tool.name for tool in tools]
 
 # Set up the prompt with input variables for tools, user input and a scratchpad for the model to record its workings
 template_kopie = """Answer the following questions in a structured format. You can use the following tool:
@@ -138,7 +152,7 @@ Follow this process:
 Question: {input}
 
 Step 1: Use tools to gather information.
-Action: <Tool Name>
+Action: the action to take, should be one of [{tool_names}]
 Action Input: <Query>
 Observation: <Tool's Response>
 ...(Repeat as necessary)...
@@ -242,17 +256,14 @@ llm = HuggingFacePipeline(pipeline=pipe)
 # LLM chain consisting of the LLM and a prompt
 llm_chain = LLMChain(llm=llm, prompt=prompt, verbose = True)
 
-
-# Using tools, the LLM chain and output_parser to make an agent
-tool_names = [tool.name for tool in tools]
-
 agent = LLMSingleActionAgent(
     llm_chain=llm_chain, 
     output_parser=output_parser,
     # We use "Observation" as our stop sequence so it will stop when it receives Tool output
     # If you change your prompt template you'll need to adjust this as well
     stop=["\nObservation:"], 
-    allowed_tools=tool_names
+    allowed_tools=tool_names,
+    early_stopping_method = "generate"
 )
 
 # Initiate the agent that will respond to our queries
@@ -263,26 +274,26 @@ response = agent_executor.invoke("What is the history of sign language?", interm
 print(response)
 
 final_response = response["output"]  # Extract the final response
-#print("Final Response:", final_response)
+print("Final Response:", final_response)
 
-answer = final_response
+#answer = final_response
 # Use a regex to capture everything after "Answer:"
-match = re.search(r"Answer:(.*)", final_response, re.DOTALL)
+#match = re.search(r"Answer:(.*)", final_response, re.DOTALL)
 
-if match:
+#if match:
     # Extract the part after "Answer:"
-    answer = match.group(1).strip()  # .strip() to remove leading/trailing whitespace
+#    answer = match.group(1).strip()  # .strip() to remove leading/trailing whitespace
 
     # Ensure the answer is in string format
-    if isinstance(answer, str):
-        print("Answer is a string:")
-        print(answer)
-    else:
-        print("Answer is not a string. Converting to string.")
-        answer = str(answer)  # Convert to string if needed
-        print(answer)
-else:
-    print("No answer found.")
+#    if isinstance(answer, str):
+#        print("Answer is a string:")
+#        print(answer)
+#    else:
+#        print("Answer is not a string. Converting to string.")
+#        answer = str(answer)  # Convert to string if needed
+#        print(answer)
+#else:
+#    print("No answer found.")
 
 from fpdf import FPDF  # pip install fpdf
 
@@ -322,7 +333,7 @@ image_paths = [
 pdf = PDF()
 
 # Text in Absätze aufteilen
-paragraphs = answer.strip().split("\n\n")  # Absätze erkennen anhand doppelter Zeilenumbrüche
+paragraphs = final_response.strip().split("\n\n")  # Absätze erkennen anhand doppelter Zeilenumbrüche
 
 # Prüfen, ob genug Bilder vorhanden sind
 #if len(paragraphs) > len(image_paths):

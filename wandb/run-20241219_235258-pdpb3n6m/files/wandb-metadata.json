@@ -1,0 +1,31 @@
+{
+  "os": "Windows-10-10.0.22631-SP0",
+  "python": "CPython 3.10.15",
+  "startedAt": "2024-12-19T22:52:58.723286Z",
+  "program": "c:\\Users\\annar\\Documents\\Master\\Advanced Deep Learning\\ADL_team_project_master\\ADL-Project\\ResNet50.py",
+  "codePath": "ResNet50.py",
+  "git": {
+    "remote": "https://github.com/ChiaraPerocco/ADL-Project.git",
+    "commit": "ca2144ff4fe245fab35196e23b57250ed83d9fc8"
+  },
+  "email": "anna.reiter2001@gmail.com",
+  "root": "C:\\Users\\annar\\Documents\\Master\\Advanced Deep Learning\\ADL_team_project_master\\ADL-Project",
+  "host": "LAPTOP-P1C2N2PJ",
+  "executable": "C:\\Users\\annar\\anaconda3\\python.exe",
+  "codePathLocal": "ResNet50.py",
+  "cpu_count": 4,
+  "cpu_count_logical": 8,
+  "disk": {
+    "/": {
+      "total": "1023012761600",
+      "used": "409864101888"
+    }
+  },
+  "memory": {
+    "total": "8375296000"
+  },
+  "cpu": {
+    "count": 4,
+    "countLogical": 8
+  }
+}

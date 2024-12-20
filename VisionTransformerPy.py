@@ -23,6 +23,7 @@ from sklearn import metrics  # for confusion matrix
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import seaborn as sns # Confusion Matrix
 import optuna
+import wandb
 from torchvision.utils import save_image
 #from torchcam.methods import SmoothGradCAMpp
 #from torchcam.utils import overlay_mask
@@ -145,15 +146,23 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-batch_size = 32
-learning_rate = 10**-4
-num_epochs = 30
+batch_size = 64
+learning_rate = 10**-4 
+num_epochs = 50
 
 best_params = {
     'batch_size': batch_size,
     'learning_rate': learning_rate,
     'num_epochs': num_epochs
 }
+
+# Start a W&B Run with wandb.init
+run_wandb = wandb.init(project="ViT_model_dataset2_4", 
+                       config={
+                           "batch_size": batch_size,
+                           "epochs": num_epochs,
+                           "learning_rate": learning_rate
+                       })
 
 if False:
     # Optuna objective function for hyperparameter tuning
@@ -249,6 +258,9 @@ if False:
     print("Beste Hyperparameter:", best_params)
     print("Bester Validierungsverlust:", study.best_value)
 
+
+    # Beispiel für Dropout im Transformer Encoder und Klassifikator:
+
 # Verwende die besten Hyperparameter zum Trainieren des finalen Modells
 def train_final_model(best_params, dataset_train, dataset_val, device):
     # Extrahiere die Hyperparameter
@@ -265,6 +277,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         augment=True,
         shuffle=True
     )
+
     
     # Load pretrained model
     # https://python.plainenglish.io/how-to-freeze-model-weights-in-pytorch-for-transfer-learning-step-by-step-tutorial-a533a58051ef
@@ -284,9 +297,18 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Move the final layer to the device
     model = model.to(device)
 
+    # Dropout im Klassifikator hinzufügen (head)
+    model.heads.head = nn.Sequential(
+        nn.Dropout(dropout_rate=0.5),  # Dropout im Klassifikator
+        nn.Linear(model.heads.head.in_features, num_classes)
+        )
+
+    # Überwacht das Modell und protokolliert Gradienten und Gewichte
+    wandb.watch(model, log="all") 
+
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)
 
     # Initialize lists to track loss and accuracy for all epochs
     train_losses = []
@@ -355,20 +377,29 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss:.4f}, Accuracy: {val_acc:.4f}")
 
+        # log metrics to wandb
+        wandb.log({"train acc": epoch_acc, "train loss": epoch_loss,
+                   "val acc": val_acc, "val loss": val_loss})
+
+        # Prüfe auf Early Stopping
         # Early stopping
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
-            patience = patience  # Reset patience counter
+            patience = 5  # Reset patience counter
+            print(f"Patience val_loss < best_loss {patience}")
         else:
             patience -= 1
+            print(f"Patience val_loss > best_loss {patience}")
             if patience == 0:
                 break
-
     # Load the best model weights
     model.load_state_dict(best_model_weights)
     
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
+
+    # Beende das wandb-Projekt
+    wandb.finish()
 
     # Save the training and validation metrics for all epochs
     checkpoint = {
@@ -384,7 +415,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
     # Create the folder if it doesn't exist
     os.makedirs(eval_folder_path, exist_ok=True)    # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values_dataset2_3.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "ViT_values_dataset2_4.pth"))
 
     return model
 
@@ -446,7 +477,7 @@ if False:
     # test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'ViT_model_dataset2_3.pth')
+torch.save(final_model, 'ViT_model_dataset2_4.pth')
 ###################################################################################################
 #
 # Saliency Maps with Grad-CAM
@@ -643,7 +674,8 @@ def compute_saliency_and_save():
 #if __name__ == "__main__":
 # Create folder to saliency maps
 #save_path = PATH + 'results/'
-save_path = os.path.join(current_dir, "Saliency Maps", "results_ViT_Dataset2_3")
+save_path = os.path.join(current_dir, "Saliency Maps _ViT_Dataset2_4")
+os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
