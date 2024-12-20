@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
+from torch.optim.lr_scheduler import OneCycleLR
 import optuna
 import os
 import wandb
@@ -71,8 +72,8 @@ def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, 
     train_dataset = datasets.ImageFolder(root=data_dir_train, transform=train_transform)
     valid_dataset = datasets.ImageFolder(root=data_dir_valid, transform=valid_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, valid_loader
 
@@ -87,7 +88,7 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
     ])
 
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
     return test_loader
 
@@ -146,23 +147,13 @@ class AlexNet(nn.Module):
         out = self.fc2(out)
         return out
     
-batch_size = 64
-learning_rate = 10**-4
-num_epochs = 50
-
+# Erstelle die besten Hyperparameter als Dictionary
 best_params = {
-    'batch_size': batch_size,
-    'learning_rate': learning_rate,
-    'num_epochs': num_epochs
+    'learning_rate': 0.01,  # Beispielwert
+    'batch_size': 64,      # Beispielwert
+    'num_epochs': 50       # Beispielwert
 }
 
-# Start a W&B Run with wandb.init
-run_wandb = wandb.init(project="alexNet_model_dataset2_4", 
-                       config={
-                           "batch_size": batch_size,
-                           "epochs": num_epochs,
-                           "learning_rate": learning_rate
-                       })
 
 if False:
     batch_size = 32
@@ -344,12 +335,42 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Load model
     model = AlexNet(num_classes).to(device)
 
+    # Initialisiere wandb und überwache
+    wandb.init(project='alexNet_model_dataset2_4', config=best_params)
     # Überwacht das Modell und protokolliert Gradienten und Gewichte
     wandb.watch(model, log="all") 
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
+
+    # Scheduler für OneCycleLR
+    scheduler = OneCycleLR(
+        optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=num_epochs,
+        pct_start=0.3, anneal_strategy='cos', cycle_momentum=True,
+        base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0
+    )
+
+    # Variablen für Metriken und EarlyStopping
+    best_loss = float('inf')
+    best_model_weights = None
+    patience = 5
+    patience_counter = patience
+    train_losses, train_accuracies = [], []
+    val_losses, val_accuracies = [], []
+    
+    # Funktion, um die Lernrate zu bekommen
+    def get_lr(optimizer):
+        for param_group in optimizer.param_groups:
+            return param_group['lr']
+
+    # Funktion, um das Momentum zu bekommen
+    def get_momentum(optimizer):
+        return optimizer.param_groups[0]['momentum']
+
+    # Beste Lernrate und Momentum speichern
+    best_lr = None
+    best_momentum = None
 
     # Train the model
     total_step = len(train_loader)
@@ -359,12 +380,6 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Loss and optimizer
     #criterion = nn.CrossEntropyLoss()
     #optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)
-
-    # Initialize lists to track loss and accuracy for all epochs
-    train_losses = []
-    train_accuracies = []
-    val_losses = []
-    val_accuracies = []
 
     #Initialize Variables for EarlyStopping
     best_loss = float('inf')
@@ -376,6 +391,11 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         model.train()
         running_loss = 0.0
         running_corrects = 0
+
+        current_lr = get_lr(optimizer)
+        current_momentum = get_momentum(optimizer)
+        print(f"Epoch {epoch+1}/{num_epochs}, Current Learning Rate: {current_lr:.6f}, Current Momentum: {current_momentum:.6f}")
+
         for inputs, labels in train_loader:
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -386,6 +406,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
@@ -397,7 +418,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         train_losses.append(epoch_loss)
         train_accuracies.append(epoch_acc.item())
 
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
+        print(f"Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
         
 
         # Evaluate on the validation data
@@ -425,52 +446,56 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss:.4f}, Accuracy: {val_acc:.4f}")
 
-        # log metrics to wandb
-        wandb.log({"train acc": epoch_acc, "train loss": epoch_loss,
-                   "val acc": val_acc, "val loss": val_loss})
+        # Logge Metriken zu wandb
+        wandb.log({
+            "train acc": epoch_acc,
+            "train loss": epoch_loss,
+            "val acc": val_acc,
+            "val loss": val_loss,
+            "lr": current_lr,
+            "momentum": current_momentum
+        })
 
         # Prüfe auf Early Stopping
         # Early stopping
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
-            patience = 5  # Reset patience counter
-            print(f"Patience val_loss < best_loss {patience}")
+            patience_counter = patience
+            best_lr = current_lr
+            best_momentum = current_momentum
+            print(f"Best model updated with lr={best_lr:.6f}, momentum={best_momentum:.6f} (val_loss < best_loss)")
         else:
-            patience -= 1
+            patience_counter -= 1
             print(f"Patience val_loss > best_loss {patience}")
-            if patience == 0:
+            if patience_counter == 0:
                 break
 
-    # Load the best model weights
+    # Modell mit den besten Gewichtungen speichern
     model.load_state_dict(best_model_weights)
-    
-    print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
 
-    # Beende das wandb-Projekt
-    wandb.finish()
-
-    # Save the training and validation metrics for all epochs
+    # Speichern des besten Lernraten- und Momentumwertes
     checkpoint = {
         'train_losses': train_losses,
         'train_accuracies': train_accuracies,
         'val_losses': val_losses,
         'val_accuracies': val_accuracies,
+        'best_lr': best_lr,  # Speichern der besten Lernrate
+        'best_momentum': best_momentum,  # Speichern des besten Momentums
         'hyper_params': best_params,
     }
 
-    # Define the directory path
+    # Speichern des Modells und der Metriken
     eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
-
-    # Create the folder if it doesn't exist
     os.makedirs(eval_folder_path, exist_ok=True)
-    
-    # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_4.pth"))
+    torch.save(checkpoint, os.path.join(eval_folder_path, "alexNet_values_dataset2_4.pth"))
+
+    # W&B beenden
+    wandb.finish()
 
     return model
 
-# Train the final model with the best hyperparameters
+# Trainiere das finale Modell mit den besten Hyperparametern
 final_model = train_final_model(best_params, dataset_train, dataset_val, device)
 
 # Load test data
