@@ -37,7 +37,7 @@ num_classes = 26
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 
-final_model = torch.load('resnet50_model_dataset2_2.pth')
+final_model = torch.load('ViT_model_dataset2_4.pth')
 
 def get_test_loader(data_dir,
                     batch_size,
@@ -257,7 +257,8 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results_resnet_dataset2_2")
+save_path = os.path.join(current_dir, "Saliency Maps_datasset2_4")
+os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')

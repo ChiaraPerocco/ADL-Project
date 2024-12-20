@@ -72,8 +72,8 @@ def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, 
     train_dataset = datasets.ImageFolder(root=data_dir_train, transform=train_transform)
     valid_dataset = datasets.ImageFolder(root=data_dir_valid, transform=valid_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=2, pin_memory=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
 
     return train_loader, valid_loader
 
@@ -88,7 +88,7 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
     ])
 
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=2, pin_memory=True)
 
     return test_loader
 
