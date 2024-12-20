@@ -119,7 +119,7 @@ def get_test_loader(data_dir,
     return test_loader
 
 batch_size = 32
-learning_rate = 10**-3
+learning_rate = 5*10**-5
 num_epochs = 50
 
 best_params = {
