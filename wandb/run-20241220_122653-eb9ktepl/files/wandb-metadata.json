@@ -1,0 +1,38 @@
+{
+  "os": "Windows-10-10.0.19045-SP0",
+  "python": "CPython 3.12.0",
+  "startedAt": "2024-12-20T11:26:53.494723Z",
+  "program": "\\\\nas.ads.mwn.de\\hm-aweb10ac\\Benutzer\\Dokumente\\Projekt\\ADL-Project\\VisionTransformerPy.py",
+  "codePath": "VisionTransformerPy.py",
+  "email": "chiara.perocco@hm.edu",
+  "root": "\\\\nas.ads.mwn.de\\hm-aweb10ac\\Benutzer\\Dokumente\\Projekt\\ADL-Project",
+  "host": "HM07000-L-CB-08",
+  "executable": "C:\\Program Files\\Python312\\python.exe",
+  "codePathLocal": "VisionTransformerPy.py",
+  "cpu_count": 8,
+  "cpu_count_logical": 16,
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "429496729600",
+      "used": "56557940736"
+    }
+  },
+  "memory": {
+    "total": "68431187968"
+  },
+  "cpu": {
+    "count": 8,
+    "countLogical": 16
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 3070",
+      "memoryTotal": "8589934592",
+      "cudaCores": 5888,
+      "architecture": "Ampere"
+    }
+  ],
+  "cudaVersion": "12.6"
+}

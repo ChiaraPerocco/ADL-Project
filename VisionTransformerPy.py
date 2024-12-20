@@ -294,21 +294,24 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Replace last layer
     model.heads.head = torch.nn.Linear(model.heads.head.in_features, num_classes)
 
-    # Move the final layer to the device
-    model = model.to(device)
+    dropout_rate = 0.5
 
     # Dropout im Klassifikator hinzufügen (head)
     model.heads.head = nn.Sequential(
-        nn.Dropout(dropout_rate=0.5),  # Dropout im Klassifikator
+        nn.Dropout(dropout_rate),  # Dropout im Klassifikator
         nn.Linear(model.heads.head.in_features, num_classes)
         )
+    
+    # Move the final layer to the device
+    model = model.to(device)
 
     # Überwacht das Modell und protokolliert Gradienten und Gewichte
+    wandb.init(project="ViT_model_dataset2_4", config=best_params)
     wandb.watch(model, log="all") 
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)
+    optimizer = optim.Adam(model.heads.head.parameters(), lr=learning_rate, weight_decay = 0.005)
 
     # Initialize lists to track loss and accuracy for all epochs
     train_losses = []

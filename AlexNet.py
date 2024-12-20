@@ -17,6 +17,8 @@ import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 import optuna
 import os
+import wandb
+import copy
 
 # Absolut path of current script
 current_dir = os.path.dirname(__file__)
@@ -69,8 +71,8 @@ def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, 
     train_dataset = datasets.ImageFolder(root=data_dir_train, transform=train_transform)
     valid_dataset = datasets.ImageFolder(root=data_dir_valid, transform=valid_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
     return train_loader, valid_loader
 
@@ -85,7 +87,7 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
     ])
 
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
 
     return test_loader
 
@@ -144,7 +146,7 @@ class AlexNet(nn.Module):
         out = self.fc2(out)
         return out
     
-batch_size = 32
+batch_size = 64
 learning_rate = 10**-4
 num_epochs = 50
 
@@ -153,6 +155,14 @@ best_params = {
     'learning_rate': learning_rate,
     'num_epochs': num_epochs
 }
+
+# Start a W&B Run with wandb.init
+run_wandb = wandb.init(project="alexNet_model_dataset2_4", 
+                       config={
+                           "batch_size": batch_size,
+                           "epochs": num_epochs,
+                           "learning_rate": learning_rate
+                       })
 
 if False:
     batch_size = 32
@@ -229,8 +239,6 @@ if False:
         val_loss = val_loss / len(valid_loader.dataset)
         val_acc = val_corrects.double() / len(valid_loader.dataset)
                 
-
-
 
 
 if False:
@@ -336,9 +344,12 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     # Load model
     model = AlexNet(num_classes).to(device)
 
+    # Überwacht das Modell und protokolliert Gradienten und Gewichte
+    wandb.watch(model, log="all") 
+
     # Loss and optimizer
-    #criterion = nn.CrossEntropyLoss()
-    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
 
     # Train the model
     total_step = len(train_loader)
@@ -346,14 +357,19 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     total_step = len(train_loader)
 
     # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)
+    #criterion = nn.CrossEntropyLoss()
+    #optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)
 
     # Initialize lists to track loss and accuracy for all epochs
     train_losses = []
     train_accuracies = []
     val_losses = []
     val_accuracies = []
+
+    #Initialize Variables for EarlyStopping
+    best_loss = float('inf')
+    best_model_weights = None
+    patience = 5
     
     # Train the model with the best hyperparameters
     for epoch in range(num_epochs):
@@ -382,6 +398,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         train_accuracies.append(epoch_acc.item())
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
+        
 
         # Evaluate on the validation data
         model.eval()
@@ -406,7 +423,32 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         val_losses.append(val_loss)
         val_accuracies.append(val_acc.item())
     
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss:.4f}, Accuracy: {val_acc:.4f}")
+
+        # log metrics to wandb
+        wandb.log({"train acc": epoch_acc, "train loss": epoch_loss,
+                   "val acc": val_acc, "val loss": val_loss})
+
+        # Prüfe auf Early Stopping
+        # Early stopping
+        if val_loss < best_loss:
+            best_loss = val_loss
+            best_model_weights = copy.deepcopy(model.state_dict())  # Deep copy here      
+            patience = 5  # Reset patience counter
+            print(f"Patience val_loss < best_loss {patience}")
+        else:
+            patience -= 1
+            print(f"Patience val_loss > best_loss {patience}")
+            if patience == 0:
+                break
+
+    # Load the best model weights
+    model.load_state_dict(best_model_weights)
+    
     print(f"Final Validation Loss: {val_loss:.4f}, Final Validation Accuracy: {val_acc:.4f}")
+
+    # Beende das wandb-Projekt
+    wandb.finish()
 
     # Save the training and validation metrics for all epochs
     checkpoint = {
@@ -424,7 +466,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     os.makedirs(eval_folder_path, exist_ok=True)
     
     # Save the checkpoint
-    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_3.pth"))
+    torch.save(checkpoint, os.path.join(current_dir, "Evaluation_folder", "alexNet_values_dataset2_4.pth"))
 
     return model
 
@@ -437,57 +479,58 @@ test_loader = get_test_loader(
     batch_size=best_params['batch_size']
 )
 
-# Class name list
-#class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+if False:
+    # Class name list
+    #class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
-# Test the model on the test data
-def test_model(model, test_loader):
-    model.eval()
-    test_corrects = 0
-    all_labels_alexNet = []
-    all_preds_alexNet = []
+    # Test the model on the test data
+    def test_model(model, test_loader):
+        model.eval()
+        test_corrects = 0
+        all_labels_alexNet = []
+        all_preds_alexNet = []
 
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-            outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-            test_corrects += torch.sum(preds == labels.data)
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                test_corrects += torch.sum(preds == labels.data)
 
 
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
-            all_labels_alexNet.extend(labels.cpu().numpy())
-            all_preds_alexNet.extend(preds.cpu().numpy())
+                # Speichern der Labels und Vorhersagen für spätere Auswertungen
+                all_labels_alexNet.extend(labels.cpu().numpy())
+                all_preds_alexNet.extend(preds.cpu().numpy())
 
-    # Convert numerical labels and predictions to class names
-    #true_labels = [class_names[i] for i in all_labels_alexNet]
-    #predicted_labels = [class_names[i] for i in all_preds_alexNet]
+        # Convert numerical labels and predictions to class names
+        #true_labels = [class_names[i] for i in all_labels_alexNet]
+        #predicted_labels = [class_names[i] for i in all_preds_alexNet]
 
-    # Berechnung der Test Accuracy
-    test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
-    print(f'Test Accuracy: {test_acc_alexNet:.4f}')
+        # Berechnung der Test Accuracy
+        test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
+        print(f'Test Accuracy: {test_acc_alexNet:.4f}')
 
-    # Berechnung von Precision, Recall und F1-Score
-    precision_alexNet, recall_alexNet, f1_alexNet, _ = precision_recall_fscore_support(all_labels_alexNet, all_preds_alexNet, average='weighted')
-    
-    print(f'Test Accuracy: {test_acc_alexNet:.4f}')
-    print(f'Precision: {precision_alexNet:.4f}')
-    print(f'Recall: {recall_alexNet:.4f}')
-    print(f'F1-Score: {f1_alexNet:.4f}')
-    
-    print(f'Labels Testdaten: {all_labels_alexNet}')
-    print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
-    # Rückgabe der Metriken
-    return test_acc_alexNet.item(), precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet
+        # Berechnung von Precision, Recall und F1-Score
+        precision_alexNet, recall_alexNet, f1_alexNet, _ = precision_recall_fscore_support(all_labels_alexNet, all_preds_alexNet, average='weighted')
+        
+        print(f'Test Accuracy: {test_acc_alexNet:.4f}')
+        print(f'Precision: {precision_alexNet:.4f}')
+        print(f'Recall: {recall_alexNet:.4f}')
+        print(f'F1-Score: {f1_alexNet:.4f}')
+        
+        print(f'Labels Testdaten: {all_labels_alexNet}')
+        print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
+        # Rückgabe der Metriken
+        return test_acc_alexNet.item(), precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet
 
-# Testen auf Testdaten und Speichern der Metriken und label
-test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(final_model, test_loader)
+    # Testen auf Testdaten und Speichern der Metriken und label
+    test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(final_model, test_loader)
 
 
 # Save the entire model
-torch.save(final_model, 'alexNet_model_dataset2_3.pth')
+torch.save(final_model, 'alexNet_model_dataset2_4.pth')
 
 ###################################################################################################
 #
@@ -678,7 +721,8 @@ def compute_saliency_and_save():
 
 
 #save_path = os.path.join(current_dir, "Saliency Map", "results")
-save_path = os.path.join(current_dir, "Saliency Maps", "results_alexNet_dataset2_3")
+save_path = os.path.join(current_dir, "Saliency Maps_alexNet_dataset2_4")
+os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
