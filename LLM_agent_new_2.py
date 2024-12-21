@@ -69,6 +69,8 @@ from langchain.prompts import BaseChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain_community.utilities import WikipediaAPIWrapper  # Explicitly importing the Wikipedia tool
 from langchain_community.tools import WikipediaQueryRun
+from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+from langchain_community.tools import DuckDuckGoSearchResults
 from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessage
 # Hugging face imports
 from huggingface_hub import login
@@ -87,24 +89,27 @@ access_token = "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"
 login(token=access_token)
 
 # Initialize the Wikipedia tool manually
-wikipedia_wrapper = WikipediaAPIWrapper(top_k_results=3, doc_content_chars_max=500)
+wikipedia_wrapper = WikipediaAPIWrapper()
 wikipedia_tool = WikipediaQueryRun(api_wrapper=wikipedia_wrapper)
 
 # Initialize Duckduckgo tool manually
 #from langchain_community.tools import DuckDuckGoSearchResults
 #from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 
-#duckduckgo_wrapper = DuckDuckGoSearchAPIWrapper(region="de-de", time="d", max_results=2)
-#duckduckgo_tool = DuckDuckGoSearchResults(api_wrapper=duckduckgo_wrapper, source="news")
+duckduckgo_wrapper = DuckDuckGoSearchAPIWrapper(region="de-de", time="d", max_results=2)
+duckduckgo_tool = DuckDuckGoSearchResults(api_wrapper=duckduckgo_wrapper)
 
 from langchain_community.tools.pubmed.tool import PubmedQueryRun
 pubmed_tool = PubmedQueryRun()
 # Create the tools (only using the Wikipedia tool here for example)
 tools = [Tool(name="Wikipedia", func=wikipedia_tool.run, description="Search Wikipedia for information"),
-         Tool(name="Pubmed", func=pubmed_tool.invoke, description="Search for information")]
+         Tool(name="DuckDuckgo", func=duckduckgo_tool.invoke, description="Search for information")]
 
-print(wikipedia_tool.run("History of sign language"))
-print(pubmed_tool.invoke("sign language"))
+letter = "A"
+print(duckduckgo_tool.run(f"American Sign Language letter A hand shape"))
+
+
+
 
 tool_names = [tool.name for tool in tools]
 
@@ -143,7 +148,7 @@ prompt = CustomPromptTemplate(
     # This includes the `intermediate_steps` variable because that is needed
     input_variables=["input", "intermediate_steps"]
 )
-
+# https://python.langchain.com/v0.1/docs/modules/model_io/prompts/few_shot_examples/
 
 class CustomOutputParser(AgentOutputParser):
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:

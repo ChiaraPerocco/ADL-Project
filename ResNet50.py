@@ -5,7 +5,10 @@
 # source: https://pytorch.org/vision/stable/models.html
 # source: https://optuna.org/
 # source: https://medium.com/@boukamchahamdi/fine-tuning-a-resnet18-model-with-optuna-hyperparameter-optimization-2e3eab0bcca7
-#
+# source: https://towardsdatascience.com/designing-your-neural-networks-a5e4617027ed
+# source: https://pytorch.org/docs/stable/optim.html
+# source: https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
+# source: https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.OneCycleLR.html
 ###############################################################################################
 import os
 import copy
@@ -80,9 +83,9 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
 
 # Erstelle die besten Hyperparameter als Dictionary
 best_params = {
-    'learning_rate': 0.1,  # Beispielwert
+    'learning_rate': 0.001,  # Beispielwert (Startwert für den Optimierer)
     'batch_size': 64,      # Beispielwert
-    'num_epochs': 20       # Beispielwert
+    'num_epochs': 50       # Beispielwert
 }
 
 
@@ -103,7 +106,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         param.requires_grad = False
     for param in model.fc.parameters():
         param.requires_grad = True
-    
+
     # Ersetze die letzte Schicht (Fully Connected Layer)
     model.fc = nn.Sequential(
         nn.Dropout(p=0.5),  # Dropout hinzugefügt
@@ -124,7 +127,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     scheduler = OneCycleLR(
         optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=num_epochs,
         pct_start=0.3, anneal_strategy='cos', cycle_momentum=True,
-        base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0
+        base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=1000.0
     )
 
     # Variablen für Metriken und EarlyStopping
@@ -243,14 +246,13 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     os.makedirs(eval_folder_path, exist_ok=True)
     torch.save(checkpoint, os.path.join(eval_folder_path, "resnet_values_dataset2_5.pth"))
 
-    # W&B beenden
-    wandb.finish()
+   # # W&B beenden
+   # wandb.finish()
 
     return model
 
 # Trainiere das finale Modell mit den besten Hyperparametern
 final_model = train_final_model(best_params, dataset_train, dataset_val, device)
-
 
 
 # Load test data
@@ -290,8 +292,10 @@ def test_model(model, test_loader):
 test_acc, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Save the entire model
-torch.save(final_model, 'resnet50_model_dataset2_5.pth')
+#torch.save(final_model, 'resnet50_model_dataset2_5.pth')
+wandb.save('resnet50_model_dataset2_5.pth')  # Speichert das Modell in W&B
 
+wandb.finish()
 ###################################################################################################
 #
 # Saliency Maps with Grad-CAM
@@ -489,3 +493,28 @@ os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
+
+
+"""
+Ausführen des Modells auf den Testdaten
+# Modell und Metriken laden
+checkpoint = torch.load('path_to_saved_model/resnet_values.pth')
+
+# Lade das Modell mit den besten Gewichtungen
+model.load_state_dict(checkpoint['best_model_weights'])
+
+# Lade die besten Hyperparameter und setze sie wieder
+best_lr = checkpoint['best_lr']
+best_momentum = checkpoint['best_momentum']
+
+# Setze den Optimierer und Scheduler mit den gespeicherten Werten
+optimizer = optim.SGD(model.fc.parameters(), lr=best_lr, momentum=best_momentum, weight_decay=0.005)
+scheduler = OneCycleLR(
+    optimizer, max_lr=best_lr, steps_per_epoch=len(train_loader), epochs=best_params['num_epochs'],
+    pct_start=0.3, anneal_strategy='cos', cycle_momentum=True,
+    base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0
+)
+
+# Teste das Modell auf neuen Testdaten
+test_acc, all_labels_resNet50, all_preds_resNet50 = test_model(model, test_loader)
+"""
