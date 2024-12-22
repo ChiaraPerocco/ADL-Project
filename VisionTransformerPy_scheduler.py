@@ -23,9 +23,9 @@ dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 num_classes = 26
 
 batch_size = 64
-learning_rate = 1e-4
+learning_rate = 0.001
 num_epochs = 50
-num_workers = 2  # Dies bleibt in der main Funktion, wie du es gewünscht hast
+num_workers = 4  # Dies bleibt in der main Funktion, wie du es gewünscht hast
 
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -33,7 +33,7 @@ print(device)
 
 # W&B Initialisierung – nur einmal in der main() Funktion
 def initialize_wandb():
-    wandb.init(project="ViT_model_dataset2_5", config={
+    wandb.init(project="ViT_model_dataset2_6", config={
         'batch_size': batch_size,
         'learning_rate': learning_rate,
         'num_epochs': num_epochs
@@ -102,6 +102,11 @@ def train_final_model(model, train_loader, valid_loader, best_params):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.heads.head.parameters(), lr=best_params['learning_rate'], weight_decay=0.005)
 
+    # OneCycleLR Scheduler Initialisierung
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=num_epochs,
+        pct_start=0.3, anneal_strategy='cos', div_factor=25.0, final_div_factor=1000.0)
+
+
     train_losses, train_accuracies, val_losses, val_accuracies = [], [], [], []
 
     best_loss = float('inf')
@@ -121,15 +126,29 @@ def train_final_model(model, train_loader, valid_loader, best_params):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
+
+            # Aktuelle Lernrate (LR)
+            current_lr = scheduler.get_last_lr()[0]  # Gibt die aktuelle Lernrate zurück
+
 
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
+
+            wandb.log({
+                "train_loss": loss.item(),
+                "train_acc": torch.sum(preds == labels.data).item() / len(labels),
+                "learning_rate": current_lr
+            })
 
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = running_corrects.double() / len(train_loader.dataset)
 
         train_losses.append(epoch_loss)
         train_accuracies.append(epoch_acc.item())
+
+
+
 
         # Validierung
         model.eval()
@@ -156,10 +175,11 @@ def train_final_model(model, train_loader, valid_loader, best_params):
               f"Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_acc:.4f}, "
               f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
 
-        # Logge Metriken zu W&B
+         # Logge Metriken zu W&B
         wandb.log({
             "train_loss": epoch_loss, "train_acc": epoch_acc,
-            "val_loss": val_loss, "val_acc": val_acc
+            "val_loss": val_loss, "val_acc": val_acc,
+            "learning_rate": current_lr  # Lernrate auch hier loggen
         })
 
         # Early Stopping
@@ -176,8 +196,8 @@ def train_final_model(model, train_loader, valid_loader, best_params):
     model.load_state_dict(best_model_weights)
 
     # Speichern des besten Modells
-    torch.save(model.state_dict(), "ViT_model_dataset2_5.pth")
-    print("Bestes Modell gespeichert als 'ViT_model_dataset2_5.pth'.")
+    torch.save(model.state_dict(), "ViT_model_dataset2_6.pth")
+    print("Bestes Modell gespeichert als 'ViT_model_dataset2_6.pth'.")
 
     return model
 
@@ -219,7 +239,7 @@ def main():
     initialize_wandb()
 
     # Trainiere das Modell
-    best_params = {'learning_rate': learning_rate, 'num_epochs': num_epochs}
+    best_params = {'learning_rate': learning_rate, 'num_epochs': num_epochs, 'batch_size': batch_size}
     model = train_final_model(model, train_loader, valid_loader, best_params)
 
     # Teste das Modell
@@ -232,6 +252,6 @@ def main():
     })
 
     # Rufe noch wandb.finish() auf!!
-
+    wandb.finish()
 if __name__ == "__main__":
-    main() 
+    main()

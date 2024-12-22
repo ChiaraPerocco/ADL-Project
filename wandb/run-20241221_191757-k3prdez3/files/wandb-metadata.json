@@ -1,0 +1,40 @@
+{
+  "os": "Windows-10-10.0.19045-SP0",
+  "python": "CPython 3.11.9",
+  "startedAt": "2024-12-21T18:17:57.493115Z",
+  "program": "<python with no main file>",
+  "git": {
+    "remote": "https://github.com/ChiaraPerocco/ADL-Project",
+    "commit": "1ecaaf20d62b4c814792530aa962f0602e923ae8"
+  },
+  "email": "anna.reiter2001@gmail.com",
+  "root": "C:\\Users\\Christoph\\Documents\\Anna\\ADL-Project",
+  "host": "DESKTOP-K76OEC0",
+  "executable": "C:\\Users\\Christoph\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "cpu_count": 6,
+  "cpu_count_logical": 12,
+  "gpu": "NVIDIA GeForce GTX 1070",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "254903025664",
+      "used": "236644929536"
+    }
+  },
+  "memory": {
+    "total": "17129967616"
+  },
+  "cpu": {
+    "count": 6,
+    "countLogical": 12
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce GTX 1070",
+      "memoryTotal": "8589934592",
+      "cudaCores": 1920,
+      "architecture": "Pascal"
+    }
+  ],
+  "cudaVersion": "12.6"
+}
