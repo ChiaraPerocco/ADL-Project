@@ -105,35 +105,14 @@ def initialize_model(num_classes):
 
 model = initialize_model(26)
 
-model.load_state_dict(torch.load("ViT_model_dataset2_5.pth"))
+final_model = torch.load("ViT_model_dataset2_5.pth", map_location=torch.device('cpu'), weights_only=True)
+model.load_state_dict(final_model)
 
 model.eval()
 
-saliency = Saliency(model)
 
-# Testloader durchlaufen (Angenommen, `test_loader` enthält Bilder und Labels)
-for images, labels in test_loader:
-    # Stelle sicher, dass die Bilder auf das gleiche Gerät wie das Modell sind
-    images = images.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-    labels = labels.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
-    # Berechne die Vorhersage des Modells
-    output = model(images)
-    target_class = output.argmax(dim=1)  # Zielklasse basierend auf der höchsten Ausgabe des Modells
-
-    # Berechne die Saliency Map für das Bild
-    saliency_map = saliency.attribute(images, target=target_class)
-
-    # Visualisiere oder speichere die Saliency Map
-    # (Hier visualisieren wir nur das erste Bild im Batch, du kannst dies anpassen)
-    saliency_map = saliency_map.squeeze().cpu().detach().numpy()  # Entferne Batch-Dimension und lade auf CPU
-
-    # Visualisiere die Saliency Map für das erste Bild im Batch
-    plt.imshow(saliency_map[0], cmap='hot', interpolation='nearest')
-    plt.colorbar()
-    plt.title(f"Saliency Map für Bild {target_class[0].item()}")
-    plt.show()
-if False:
+if True:
         
     """ 
         Implement GradCAM
@@ -302,7 +281,7 @@ if False:
             data = data.to(device).requires_grad_()
 
             # Compute saliency maps for the input data
-            saliency_map = GradCAM(final_model).saliency(data)
+            saliency_map = GradCAM(model).saliency(data)
 
             # Save saliency maps
             for i in range(data.size(0)):
@@ -313,7 +292,7 @@ if False:
 
 
     #save_path = os.path.join(current_dir, "Saliency Map", "results")
-    save_path = os.path.join(current_dir, "Saliency Maps_datasset2_4")
+    save_path = os.path.join(current_dir, "Saliency Maps_ViT_Dataset2_5")
     os.makedirs(save_path, exist_ok=True)
     create_folder(save_path)
     compute_saliency_and_save()
