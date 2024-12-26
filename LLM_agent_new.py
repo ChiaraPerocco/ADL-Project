@@ -75,6 +75,8 @@ from huggingface_hub import login
 from langchain_huggingface.llms import HuggingFacePipeline
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from transformers import pipeline
+from langchain_ollama.llms import OllamaLLM
+
 
 # Get the path of current_dir
 current_dir = os.path.dirname(__file__)
@@ -249,9 +251,10 @@ max_tokens = model.config.max_position_embeddings
 
 
 # Set up the pipeline for text generation
-pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=500, pad_token_id=tokenizer.eos_token_id)
-llm = HuggingFacePipeline(pipeline=pipe)
+#pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=500, pad_token_id=tokenizer.eos_token_id)
+#llm = HuggingFacePipeline(pipeline=pipe)
 
+llm = OllamaLLM(model="llama3.1")
 
 # LLM chain consisting of the LLM and a prompt
 llm_chain = LLMChain(llm=llm, prompt=prompt, verbose = True)
