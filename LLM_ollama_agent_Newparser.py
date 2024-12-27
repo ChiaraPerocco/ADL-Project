@@ -95,15 +95,18 @@ response = chain.invoke({"question": question})
 print("Whole response:")
 print(response)
 # Output results
-print("Final Answer:")
-print(response['answer'])
-print("\nSources:")
-print(response['source'])
+#print("Final Answer:")
+#print(response['answer'])
+#print("\nSources:")
+#print(response['source'])
 
-final_answer = response['answer']
-print(str(final_answer))
+#final_answer = response['answer']
+#print(str(final_answer))
 
-"""
+answer = response.get("answer", "")
+print(answer)
+
+
 # Create the article in pdf format
 from fpdf import FPDF
 import os
@@ -125,14 +128,14 @@ pdf.set_font("Arial", size=12)
 # Zum Beispiel: response = {"output": "Hier steht der generierte Text zum Thema Gebärdensprache..."}
 
 # Schreibe den extrahierten Text in die PDF
-pdf.multi_cell(0, 10, final_answer, align="c")
+pdf.multi_cell(0, 10, answer, align="c")
 
 current_dir = os.path.dirname(__file__)
 pdf_filename = input("Enter the desired PDF file name (without extension): ")
 pdf.output(os.path.join(current_dir, "Article", f"{pdf_filename}.pdf"))
 
 print("PDF wurde erfolgreich erstellt!")
-"""
+
 """
 # Initialisiere das PDF
 class PDF(FPDF):
