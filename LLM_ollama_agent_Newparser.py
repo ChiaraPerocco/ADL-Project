@@ -295,17 +295,31 @@ def create_agent_executor():
         return_intermediate_steps=True,
     )
 
-# Question
-question = """
-Please provide a detailed text in string format about American Sign Language (ASL) with the following structure:
-1. **How the letter 'A' is signed in ASL**: Break down the steps with detailed instructions on how to sign the letter.
-2 **A general overview of ASL**: Include its history, structure, key features, and the communities that use it.
-3. **Interesting facts about ASL**: Cover its origins, cultural significance, and unique linguistic properties.
-4. Each section should have a thorough explanation of at least 250 words. Ensure the total word count exceeds 1000 words.
+detected_letter = ['B']
 
-Each section should be a clear and distinct paragraph. Please include specific examples where necessary.
+question = f"""
+Write a concise article about the letter {detected_letter} in string format and its meaning in sign language. The article should include these four sections:
+
+1.**Introduction**: What does the letter {detected_letter} symbolize and its meaning in different contexts?
+2 **The letter in written language**: The role and use of the letter {detected_letter} in the alphabet and in words.
+3 **The letter in sign language**: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
+4 **Conclusion**: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+
+Ensure each section is at least 250 words, and the total word count for the entire article should exceed 2000 words.
 """
 
+if False:
+    # Question
+    question = """
+    Please provide a detailed text in string format about American Sign Language (ASL) with the following structure:
+    1. **How the letter 'A' is signed in ASL**: Break down the steps with detailed instructions on how to sign the letter.
+    2 **A general overview of ASL**: Include its history, structure, key features, and the communities that use it.
+    3. **Interesting facts about ASL**: Cover its origins, cultural significance, and unique linguistic properties.
+    4. Each section should have a thorough explanation of at least 250 words. Ensure the total word count exceeds 1000 words.
+
+    Each section should be a clear and distinct paragraph. Please include specific examples where necessary.
+
+    """
 
 # Execute using the chain
 chain = create_chain()
@@ -355,7 +369,7 @@ if not answer:
     print("No answer found in the response.")
 else:
     output_directory = os.path.join(os.path.dirname(__file__), "Article")
-    output_file = input("Enter the file name for the article (default: 'article.pdf'): ")
+    output_file = input("Enter the file name for the article with extension (default: 'article.pdf'): ")
     
     # Generiere den Artikel im angegebenen Ordner
     print("Generating article with Pandoc...")
