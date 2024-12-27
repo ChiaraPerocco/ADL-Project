@@ -13,3 +13,5 @@ Steps:
 3. Download the model llama3.1 via the command prompt: ollama pull llama3.1
 4. Check in the command prompt if the version is downloaded: ollama list should show the available models
 5. For using it in vs code the path to the ollama installation needs to be added in the Systemsumgebungsvariablen
+6. your have to install pandoc from https://github.com/jgm/pandoc/releases/tag/3.6.1 and add it to system variables.
+7. Install Miktext for using pandoc https://miktex.org/download
