@@ -15,9 +15,9 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # Pfade zu den Datensätzen
-dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
-dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
-dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
+dataset_train = os.path.join(current_dir, "Sign Language 2", "train_processed")
+dataset_val = os.path.join(current_dir, "Sign Language 2", "val_processed")
+dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 
 # Hyperparameter
 num_classes = 26
