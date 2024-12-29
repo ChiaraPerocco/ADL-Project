@@ -273,8 +273,8 @@ format_instructions = output_parser.get_format_instructions()
 
 # Define the prompt with format instructions
 prompt = PromptTemplate(
-    template="Answer the user's question as best as possible using the following format:\n{format_instructions}\nQuestion: {question}",
-    #template="You must generate a response in strict JSON format. Use the following schema:\n{format_instructions}\nQuestion: {question}",
+    #template="Answer the user's question as best as possible using the following format:\n{format_instructions}\nQuestion: {question}",
+    template="You must generate a response in strict JSON format. Use the following schema:\n{format_instructions}\nQuestion: {question}",
     input_variables=["question"],
     partial_variables={"format_instructions": format_instructions},
 )
@@ -343,6 +343,29 @@ print(answer)
 import subprocess
 import os
 
+from diffusers import DiffusionPipeline
+import torch
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
+
+# Get the path of current_dir
+current_dir = os.path.dirname(__file__)
+
+# Funktion zur Generierung der Bildunterschrift
+def generate_image_caption(image_paths):
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+
+    # Bild laden
+    image = Image.open(image_paths)
+    
+    # Bildunterschrift generieren
+    inputs = processor(image, return_tensors="pt")
+    outputs = model.generate(**inputs, max_length=50)
+    caption = processor.decode(outputs[0], skip_special_tokens=True)
+    
+    print(caption)
+    return caption
 
 
 # Funktion: Artikel mit Bildern in Markdown erstellen
@@ -389,65 +412,76 @@ def generate_article_with_pandoc(article_text, image_paths, output_directory="ou
         if os.path.exists(temp_markdown_file):
             os.remove(temp_markdown_file)
             
-
-# Funktion zur Generierung der Bildunterschrift
-def generate_image_caption(image_paths):
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-
-    # Bild laden
-    image = Image.open(image_paths)
-    
-    # Bildunterschrift generieren
-    inputs = processor(image, return_tensors="pt")
-    outputs = model.generate(**inputs, max_length=50)
-    caption = processor.decode(outputs[0], skip_special_tokens=True)
-    
-    print(caption)
-    return caption
             
 # Liste von Bildpfaden
 current_dir = os.path.dirname(__file__)
-image_paths = [
-        os.path.join(current_dir, "DiffusionModelOutput", "article_image_1.png"),
-        os.path.join(current_dir, "DiffusionModelOutput", "article_image_2.png"),
-        os.path.join(current_dir, "DiffusionModelOutput", "article_image_3.png"),
-        os.path.join(current_dir, "DiffusionModelOutput", "article_image_4.png"),
-    ]
+
 
 # Verarbeite die Antwort und generiere den Artikel
 if not answer:
     print("No answer found in the response.")
 else:
-    # Die Antwort in Abschnitte unterteilen
-    paragraphs = answer.strip().split("\n\n")
     
-    # Überprüfe, ob alle Bilder existieren und generiere die Captions
+    # Auswahl treffen, ob neue Bilder generiert werden sollen
+    user_choice = input("Do you want to generate new images using the diffusion model? (Yes/No): ").strip().lower()
+
+    if user_choice == "yes":
+        
+        new_directory = "generated_images"
+        os.makedirs(new_directory, exist_ok=True)
+        
+        # Diffusionsmodell laden und Bilder generieren
+        pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5")
+        pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+
+        prompts = [
+            "A diagram about the history of sign language",
+            "A statistic about sign language",
+            f"An image showing the {detected_letter} in sign language",
+            "An image about the American Sign Language Alphabet",
+        ]
+        
+        image_paths = []
+        for i, prompt in enumerate(prompts, 1):
+            image = pipeline(prompt).images[0]
+            image_path = os.path.join(new_directory, f"image_{i}.png")
+            image.save(image_path)
+            image_paths.append(image_path)
+            
+        print(f"Generated images have been saved in the folder: {new_directory}")
+
+    else:
+        
+        # Standardbilder verwenden
+        print("Using default images.")
+        current_dir = os.path.dirname(__file__)
+        image_paths = [
+            os.path.join(current_dir, "DiffusionModelOutput", "article_image_1.png"),
+            os.path.join(current_dir, "DiffusionModelOutput", "article_image_2.png"),
+            os.path.join(current_dir, "DiffusionModelOutput", "article_image_3.png"),
+            os.path.join(current_dir, "DiffusionModelOutput", "article_image_4.png"),
+        ]
+
+    # Bildunterschriften generieren
     captions = []
-    for i, image_path in enumerate(image_paths):
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+    for image_path in image_paths:
         if os.path.exists(image_path):
-            caption = generate_image_caption(image_path)
+            image = Image.open(image_path)
+            inputs = processor(image, return_tensors="pt")
+            outputs = blip_model.generate(**inputs, max_length=50)
+            caption = processor.decode(outputs[0], skip_special_tokens=True)
             captions.append(caption)
-            print(f"Generated Caption for Image {i+1}: {caption}")
         else:
-            print(f"Image {i+1} not found at {image_path}")
-            captions.append("")  # Falls das Bild nicht existiert, eine leere Caption hinzufügen
-
-    # Markdown-Inhalt vorbereiten
-    updated_content = ""
-    for i, paragraph in enumerate(paragraphs):
-        updated_content += paragraph + "\n\n"  # Füge nach jedem Abschnitt einen Absatzumbruch hinzu
-
-        # Bild nach jedem Abschnitt einfügen (Bild 1 nach Abschnitt 1, Bild 2 nach Abschnitt 2, usw.)
-        #if i < len(image_paths) and os.path.exists(image_paths[i]):
-        #    updated_content += f"![{captions[i]}]({image_paths[i]})\n\n"  # Füge die generierte Caption hinzu
+            captions.append("No caption available (image missing).")
 
     output_directory = os.path.join(os.path.dirname(__file__), "Article")
     output_file = input("Enter the file name for the article with extension (default: 'article.pdf'): ")
     
     # Generate the article as a PDF
     print("Generating article with Pandoc...")
-    generate_article_with_pandoc(updated_content, image_paths, output_directory=output_directory, output_file=output_file)
+    generate_article_with_pandoc(answer, image_paths, output_directory=output_directory, output_file=output_file)
     print("Article saved.")
 
 if False:
