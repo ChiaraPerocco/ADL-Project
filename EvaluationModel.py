@@ -90,7 +90,7 @@ print(device)
 #resnet50_model = torch.load('resnet50_model_dataset2_2.pth', map_location=torch.device('cpu'))
 #alexnet_model = torch.load('alexnet_model_dataset2_2.pth', map_location=torch.device('cpu'))
 #ViT_model = torch.load('ViT_model_dataset2_2.pth', map_location=torch.device('cpu'))
-ViT_model = torch.load('ViT_model_dataset2_2.pth')
+ViT_model = torch.load('ViT_model_dataset2_7.pth')
 resnet50_model = torch.load('resnet50_model_dataset2_2.pth')
 
 
