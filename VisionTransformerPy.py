@@ -24,7 +24,7 @@ num_classes = 26
 
 batch_size = 64
 learning_rate = 1e-4
-num_epochs = 50
+num_epochs = 30
 num_workers = 2  # Dies bleibt in der main Funktion, wie du es gewünscht hast
 
 # Device configuration
@@ -33,7 +33,7 @@ print(device)
 
 # W&B Initialisierung – nur einmal in der main() Funktion
 def initialize_wandb():
-    wandb.init(project="ViT_model_dataset2_5", config={
+    wandb.init(project="ViT_model_dataset2_7", config={
         'batch_size': batch_size,
         'learning_rate': learning_rate,
         'num_epochs': num_epochs
@@ -58,6 +58,8 @@ def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, 
             transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=10),
             transforms.RandomGrayscale(p=0.1),
             transforms.ToTensor(),
+            transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3)),
+            transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0)),
             normalize,
         ])
     else:
@@ -90,7 +92,7 @@ def initialize_model(num_classes):
 
     # Den Klassifikator (head) anpassen
     model.heads.head = nn.Sequential(
-        nn.Dropout(0.5),  # Dropout für Regularisierung
+        nn.Dropout(0.3),  # Dropout für Regularisierung
         nn.Linear(model.heads.head.in_features, num_classes)
     )
 
@@ -106,7 +108,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
 
     best_loss = float('inf')
     best_model_weights = None
-    patience = 5  # Für Early Stopping
+    patience = 3  # Für Early Stopping
 
     for epoch in range(best_params['num_epochs']):
         model.train()
@@ -166,18 +168,19 @@ def train_final_model(model, train_loader, valid_loader, best_params):
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())
-            patience = 5  # Resette Patience
+            patience = 3  # Resette Patience
         else:
             patience -= 1
             if patience == 0:
+                print("Early Stopping")
                 break
 
     # Beste Modellgewichte laden
     model.load_state_dict(best_model_weights)
 
     # Speichern des besten Modells
-    torch.save(model.state_dict(), "ViT_model_dataset2_5.pth")
-    print("Bestes Modell gespeichert als 'ViT_model_dataset2_5.pth'.")
+    torch.save(model.state_dict(), "ViT_model_dataset2_7.pth")
+    print("Bestes Modell gespeichert als 'ViT_model_dataset2_7.pth'.")
 
     return model
 
