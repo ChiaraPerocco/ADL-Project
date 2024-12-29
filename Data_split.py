@@ -37,14 +37,18 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # Pfade definieren
-dataset = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\datasetSL\ASL_Alphabet_Dataset\asl_alphabet_train"
+#dataset = r"C:\Studium\Data Analytics, M.Sc\Advanced Deep Learning\datasetSL\ASL_Alphabet_Dataset\asl_alphabet_train"
+dataset = r"C:\Users\Christoph\Documents\Anna\ASL_Alphabet_Dataset\asl_alphabet_train"
+save_path = os.path.join(current_dir, "Sign Language 2")
+os.makedirs(save_path, exist_ok=True)
 output_folder = os.path.join(current_dir, "Sign Language 2")
 
 # Anzahl der Bilder pro Klasse
-num_images_per_class = 500
+num_images_per_class = 700
 
 # Temporärer Ordner für reduzierte Datenmenge
 temp_dataset = os.path.join(output_folder, 'temp_dataset_2')
+os.makedirs(temp_dataset, exist_ok=True)
 
 for class_folder in os.listdir(dataset):
     class_path = os.path.join(dataset, class_folder)
@@ -64,12 +68,18 @@ for class_folder in os.listdir(dataset):
             shutil.copy(os.path.join(class_path, img), os.path.join(temp_class_path, img))
 
 # Aufteilung des temporären Datasets in train, val und test
-splitfolders.ratio(temp_dataset, output=output_folder, seed=1337, ratio=(.8, 0.1, 0.1))
+#splitfolders.ratio(temp_dataset, output=output_folder, seed=1337, ratio=(.8, 0.1, 0.1))
+splitfolders.ratio(temp_dataset, output=output_folder, seed=1223, ratio=(.8, 0.1, 0.1))
 
 # Definierung der Pfade für train, val und test
 dataset_train = os.path.join(output_folder, 'train_2')
+os.makedirs(dataset_train, exist_ok=True)
+
 dataset_val = os.path.join(output_folder, 'val_2')
+os.makedirs(dataset_val, exist_ok=True)
+
 dataset_test = os.path.join(output_folder, 'test_2')
+os.makedirs(dataset_test, exist_ok=True)
 
 print(f"Train Pfad: {dataset_train}")
 print(f"Val Pfad: {dataset_val}")

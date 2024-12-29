@@ -33,7 +33,7 @@ print(device)
 
 # W&B Initialisierung – nur einmal in der main() Funktion
 def initialize_wandb():
-    wandb.init(project="ViT_model_dataset2_7", config={
+    wandb.init(project="ViT_model_dataset2_8", config={
         'batch_size': batch_size,
         'learning_rate': learning_rate,
         'num_epochs': num_epochs,
@@ -94,7 +94,7 @@ def initialize_model(num_classes):
 
     # Den Klassifikator (head) anpassen
     model.heads.head = nn.Sequential(
-        nn.Dropout(0.3),  # Dropout für Regularisierung
+        nn.Dropout(drop_out_rate),  # Dropout für Regularisierung
         nn.Linear(model.heads.head.in_features, num_classes)
     )
 
@@ -181,8 +181,8 @@ def train_final_model(model, train_loader, valid_loader, best_params):
     model.load_state_dict(best_model_weights)
 
     # Speichern des besten Modells
-    torch.save(model.state_dict(), "ViT_model_dataset2_7.pth")
-    print("Bestes Modell gespeichert als 'ViT_model_dataset2_7.pth'.")
+    torch.save(model.state_dict(), "ViT_model_dataset2_8.pth")
+    print("Bestes Modell gespeichert als 'ViT_model_dataset2_8.pth'.")
 
     return model
 
