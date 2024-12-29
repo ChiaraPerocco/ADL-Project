@@ -63,13 +63,15 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-#batch_size = 64
-#learning_rate = 10**-4
-#num_epochs = 30
-
+#ViT model 7
 batch_size = 64
-learning_rate = 1e-4
-num_epochs = 50
+learning_rate = 10**-4
+num_epochs = 30
+
+# ViT model 5
+#batch_size = 64
+#learning_rate = 1e-4
+#num_epochs = 50
 
 
 best_params = {
@@ -96,7 +98,9 @@ def initialize_model(num_classes):
 
     # Den Klassifikator (head) anpassen
     model.heads.head = nn.Sequential(
-        nn.Dropout(0.5),  # Dropout für Regularisierung
+        # Dropout für Regularisierung
+        #nn.Dropout(0.5), # dropout ViT model 5
+        nn.Dropout(0.3), # dropout ViT model 7
         nn.Linear(model.heads.head.in_features, num_classes)
     )
 
@@ -105,7 +109,7 @@ def initialize_model(num_classes):
 
 model = initialize_model(26)
 
-final_model = torch.load("ViT_model_dataset2_5.pth", map_location=torch.device('cpu'), weights_only=True)
+final_model = torch.load("ViT_model_dataset2_7.pth", map_location=torch.device('cpu'), weights_only=True)
 model.load_state_dict(final_model)
 
 model.eval()
@@ -292,7 +296,7 @@ if True:
 
 
     #save_path = os.path.join(current_dir, "Saliency Map", "results")
-    save_path = os.path.join(current_dir, "Saliency Maps_ViT_Dataset2_5")
+    save_path = os.path.join(current_dir, "Saliency Maps_ViT_dataset2_7", "results_ViT_dataset2_7")
     os.makedirs(save_path, exist_ok=True)
     create_folder(save_path)
     compute_saliency_and_save()
