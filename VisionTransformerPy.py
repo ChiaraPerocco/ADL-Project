@@ -24,7 +24,7 @@ num_classes = 26
 
 batch_size = 64
 learning_rate = 1e-4
-num_epochs = 30
+num_epochs = 50
 num_workers = 2  # Dies bleibt in der main Funktion, wie du es gewünscht hast
 drop_out_rate = 0.3
 # Device configuration
@@ -40,7 +40,7 @@ def initialize_wandb():
         'drop_out': drop_out_rate
         
     })
-    wandb.run.name = "Final_Run"  # Optional, benenne den Run
+    wandb.run.name = "Second_Run"  # Optional, benenne den Run
 
 # Transformationen und DataLoader
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
