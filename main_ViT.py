@@ -203,7 +203,7 @@ def initialize_model(num_classes):
 
 model = initialize_model(26)
 
-final_model = torch.load("ViT_model_dataset2_7.pth", map_location=torch.device('cpu'), weights_only=True)
+final_model = torch.load("ViT_model_dataset2_8.pth", map_location=torch.device('cpu'), weights_only=True)
 model.load_state_dict(final_model)
 
 model.eval()

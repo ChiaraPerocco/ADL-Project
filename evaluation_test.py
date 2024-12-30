@@ -69,7 +69,7 @@ def get_test_loader(data_dir,
 #ViT model 7
 batch_size = 64
 learning_rate = 10**-4
-num_epochs = 30
+num_epochs = 50
 
 # ViT model 5
 #batch_size = 64
@@ -112,7 +112,7 @@ def initialize_model(num_classes):
 
 model = initialize_model(26)
 
-final_model = torch.load("ViT_model_dataset2_7.pth", map_location=torch.device('cpu'), weights_only=True)
+final_model = torch.load("ViT_model_dataset2_8.pth", map_location=torch.device('cpu'), weights_only=True)
 model.load_state_dict(final_model)
 
 model.eval()
@@ -178,7 +178,7 @@ plt.ylabel('True labels')
 plt.show()
 
 # Saliency Maps
-if False:
+if True:
         
     """ 
         Implement GradCAM
@@ -358,7 +358,7 @@ if False:
 
 
     #save_path = os.path.join(current_dir, "Saliency Map", "results")
-    save_path = os.path.join(current_dir, "Saliency Maps_ViT_dataset2_7", "results_ViT_dataset2_7")
+    save_path = os.path.join(current_dir, "Saliency Maps_ViT_dataset2_8", "results_ViT_dataset2_8")
     os.makedirs(save_path, exist_ok=True)
     create_folder(save_path)
     compute_saliency_and_save()
