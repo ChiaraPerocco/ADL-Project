@@ -5,10 +5,38 @@ from langchain_community.utilities import WikipediaAPIWrapper, DuckDuckGoSearchA
 from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchResults
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain_core.prompts import PromptTemplate
+from diffusers import AutoPipelineForText2Image
 from typing import List, Union
 import time
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
+import subprocess
+from diffusers import DiffusionPipeline
+import torch
+import os
+
+from langchain_ollama.llms import OllamaLLM
+from langchain.chains import LLMChain
+from langchain.agents import LLMSingleActionAgent
+from langchain.prompts import BaseChatPromptTemplate
+from langchain.agents import Tool, create_react_agent, AgentExecutor, AgentOutputParser
+from langchain_community.utilities import WikipediaAPIWrapper, DuckDuckGoSearchAPIWrapper
+from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchResults
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+#from langchain_core.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate
+from diffusers import AutoPipelineForText2Image
+import time
+from typing import List, Union
+from transformers import BlipProcessor, BlipForConditionalGeneration
+from PIL import Image
+import subprocess
+from diffusers import DiffusionPipeline
+import torch
+import os
+import json
+from langchain_core.exceptions import OutputParserException
+from langchain.schema import AgentAction, AgentFinish, HumanMessage
 
 if False:
     # Retry mechanism for DuckDuckGo tool
@@ -226,265 +254,513 @@ if False:
     print("PDF was successfully created!")
     """
 
-# Retry mechanism for DuckDuckGo tool
-class DuckDuckGoToolWithRetry:
-    def __init__(self, api_wrapper, max_retries=3, delay_between_retries=2):
-        self.tool = DuckDuckGoSearchResults(api_wrapper=api_wrapper)
-        self.max_retries = max_retries
-        self.delay_between_retries = delay_between_retries
+if False:
+    # Retry mechanism for DuckDuckGo tool
+    class DuckDuckGoToolWithRetry:
+        def __init__(self, api_wrapper, max_retries=3, delay_between_retries=2):
+            self.tool = DuckDuckGoSearchResults(api_wrapper=api_wrapper)
+            self.max_retries = max_retries
+            self.delay_between_retries = delay_between_retries
 
-    def invoke(self, *args, **kwargs):
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                return self.tool.invoke(*args, **kwargs)
-            except Exception as e:
-                print(f"DuckDuckGo tool error: {e}")
-                retries += 1
-                if retries < self.max_retries:
-                    print(f"Retrying DuckDuckGo tool... Attempt {retries + 1}")
-                    time.sleep(self.delay_between_retries)
-        print("DuckDuckGo tool failed after maximum retries. Skipping...")
-        return "The DuckDuckGo tool encountered an issue and was skipped."
+        def invoke(self, *args, **kwargs):
+            retries = 0
+            while retries < self.max_retries:
+                try:
+                    return self.tool.invoke(*args, **kwargs)
+                except Exception as e:
+                    print(f"DuckDuckGo tool error: {e}")
+                    retries += 1
+                    if retries < self.max_retries:
+                        print(f"Retrying DuckDuckGo tool... Attempt {retries + 1}")
+                        time.sleep(self.delay_between_retries)
+            print("DuckDuckGo tool failed after maximum retries. Skipping...")
+            return "The DuckDuckGo tool encountered an issue and was skipped."
 
-# Initialize tools
-wikipedia_wrapper = WikipediaAPIWrapper()
-wikipedia_tool = WikipediaQueryRun(api_wrapper=wikipedia_wrapper)
+    # Initialize tools
+    wikipedia_wrapper = WikipediaAPIWrapper()
+    wikipedia_tool = WikipediaQueryRun(api_wrapper=wikipedia_wrapper)
 
-duckduckgo_wrapper = DuckDuckGoSearchAPIWrapper(region="de-de", time="d", max_results=2)
-duckduckgo_tool_with_retry = DuckDuckGoToolWithRetry(api_wrapper=duckduckgo_wrapper)
+    duckduckgo_wrapper = DuckDuckGoSearchAPIWrapper(region="de-de", time="d", max_results=2)
+    duckduckgo_tool_with_retry = DuckDuckGoToolWithRetry(api_wrapper=duckduckgo_wrapper)
 
-tools = [
-    Tool(name="Wikipedia", func=wikipedia_tool.run, description="Use this tool to search for information in Wikipedia."),
-    Tool(name="DuckDuckGo", func=duckduckgo_tool_with_retry.invoke, description="Search for information using DuckDuckGo.")
-]
+    tools = [
+        Tool(name="Wikipedia", func=wikipedia_tool.run, description="Use this tool to search for information in Wikipedia."),
+        Tool(name="DuckDuckGo", func=duckduckgo_tool_with_retry.invoke, description="Search for information using DuckDuckGo.")
+    ]
 
-# Response Schema and Structured Output Parser
-response_schemas = [
-    ResponseSchema(name="answer", description="Answer to the user's question", type="str"),
-    ResponseSchema(
-        name="source",
-        description="Source used to answer the user's question, should be a website.",
-    ),
-]
+    # Response Schema and Structured Output Parser
+    response_schemas = [
+        ResponseSchema(name="answer", description="Answer to the user's question", type="str"),
+        ResponseSchema(
+            name="source",
+            description="Source used to answer the user's question, should be a website.",
+        ),
+    ]
 
-output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
-format_instructions = output_parser.get_format_instructions()
+    output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+    format_instructions = output_parser.get_format_instructions()
 
-# Define the prompt with format instructions
-prompt = PromptTemplate(
-    #template="Answer the user's question as best as possible using the following format:\n{format_instructions}\nQuestion: {question}",
-    template="You must generate a response in strict JSON format. Use the following schema:\n{format_instructions}\nQuestion: {question}",
-    input_variables=["question"],
-    partial_variables={"format_instructions": format_instructions},
-)
-
-
-# LLM
-model = OllamaLLM(model="llama3.1", temperature=0.7)
-
-# Create chain with prompt, model, and output parser
-def create_chain():
-    return prompt | model | output_parser
-
-# Create the AgentExecutor
-def create_agent_executor():
-    search_agent = create_react_agent(model, tools, prompt)
-    return AgentExecutor(
-        agent=search_agent,
-        tools=tools,
-        verbose=True,
-        return_intermediate_steps=True,
+    # Define the prompt with format instructions
+    prompt = PromptTemplate(
+        #template="Answer the user's question as best as possible using the following format:\n{format_instructions}\nQuestion: {question}",
+        template="You must generate a response in strict String format. Use the following schema:\n{format_instructions}\nQuestion: {question}",
+        input_variables=["question"],
+        partial_variables={"format_instructions": format_instructions},
     )
 
-detected_letter = ['B']
 
-question = f"""
-Write a concise article about the letter {detected_letter} in string format and its meaning in sign language. The article should include these four sections:
+    # LLM
+    model = OllamaLLM(model="llama3.1", temperature=0.7)
 
-1.**Introduction**: What does the letter {detected_letter} symbolize and its meaning in different contexts?
-2 **The letter in written language**: The role and use of the letter {detected_letter} in the alphabet and in words.
-3 **The letter in sign language**: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
-4 **Conclusion**: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+    # Create chain with prompt, model, and output parser
+    def create_chain():
+        return prompt | model | output_parser
 
-Ensure each section is at least 250 words, and the total word count for the entire article should exceed 2000 words.
-"""
+    # Create the AgentExecutor
+    def create_agent_executor():
+        search_agent = create_react_agent(model, tools, prompt)
+        return AgentExecutor(
+            agent=search_agent,
+            tools=tools,
+            verbose=True,
+            return_intermediate_steps=True,
+        )
 
-if False:
-    # Question
-    question = """
-    Please provide a detailed text in string format about American Sign Language (ASL) with the following structure:
-    1. **How the letter 'A' is signed in ASL**: Break down the steps with detailed instructions on how to sign the letter.
-    2 **A general overview of ASL**: Include its history, structure, key features, and the communities that use it.
-    3. **Interesting facts about ASL**: Cover its origins, cultural significance, and unique linguistic properties.
-    4. Each section should have a thorough explanation of at least 250 words. Ensure the total word count exceeds 1000 words.
+    detected_letter = ['B']
 
-    Each section should be a clear and distinct paragraph. Please include specific examples where necessary.
+    if False:
+        question = f"""
+        Write a concise article about the letter {detected_letter} in string format and its meaning in sign language. The article should include these four sections:
 
+        1.**Introduction**: What does the letter {detected_letter} symbolize and its meaning in different contexts?
+        2 **The letter in written language**: The role and use of the letter {detected_letter} in the alphabet and in words.
+        3 **The letter in sign language**: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
+        4 **Conclusion**: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+        
+        After each section an image with its caption should follow before the new section starts. The Captions of the images should 
+        Ensure each section is at least 250 words, and the total word count for the entire article should exceed 2000 words.
+        """
+    
+    question = f"""
+    You must write a structured article in string format with the following requirements:
+
+    1. Divide the article into four sections:
+    - **Introduction**: What does the letter {detected_letter} symbolize and its meaning in different contexts?
+    - **The letter in written language**: The role and use of the letter {detected_letter} in the alphabet and in words.
+    - **The letter in sign language**: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
+    - **Conclusion**: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+
+    The total word count for the article should exceed 2000 words, with each section containing at least 250 words.
+    
+    Ensure to use the following format for each section to structure the article:
+    1. Section Title: [Write the content of the section here. Ensure this section contains at least 250 words.]
+    1. Caption: [Write a short description of the image here.]
+    1. Leave a blank line before starting the next section.
     """
 
-# Execute using the chain
-chain = create_chain()
-response = chain.invoke({"question": question})
-print("Whole response:")
-print(response)
-# Output results
-#print("Final Answer:")
-#print(response['answer'])
-#print("\nSources:")
-#print(response['source'])
 
-#final_answer = response['answer']
-#print(str(final_answer))
+    if False:
+        # Question
+        question = """
+        Please provide a detailed text in string format about American Sign Language (ASL) with the following structure:
+        1. **How the letter 'A' is signed in ASL**: Break down the steps with detailed instructions on how to sign the letter.
+        2 **A general overview of ASL**: Include its history, structure, key features, and the communities that use it.
+        3. **Interesting facts about ASL**: Cover its origins, cultural significance, and unique linguistic properties.
+        4. Each section should have a thorough explanation of at least 250 words. Ensure the total word count exceeds 1000 words.
 
-answer = response.get("answer", "")
-print(answer)
+        Each section should be a clear and distinct paragraph. Please include specific examples where necessary.
 
-import subprocess
-import os
+        """
 
-from diffusers import DiffusionPipeline
-import torch
-import os
-os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
+    # Execute using the chain
+    chain = create_chain()
+    response = chain.invoke({"question": question})
+    print("Whole response:")
+    print(response)
+    # Output results
+    #print("Final Answer:")
+    #print(response['answer'])
+    #print("\nSources:")
+    #print(response['source'])
 
-# Get the path of current_dir
-current_dir = os.path.dirname(__file__)
+    #final_answer = response['answer']
+    #print(str(final_answer))
 
-# Funktion zur Generierung der Bildunterschrift
-def generate_image_caption(image_paths):
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+    answer = response.get("answer", "")
+    print(answer)
 
-    # Bild laden
-    image = Image.open(image_paths)
-    
-    # Bildunterschrift generieren
-    inputs = processor(image, return_tensors="pt")
-    outputs = model.generate(**inputs, max_length=50)
-    caption = processor.decode(outputs[0], skip_special_tokens=True)
-    
-    print(caption)
-    return caption
+    import subprocess
+    import os
 
+    from diffusers import DiffusionPipeline
+    import torch
+    import os
+    os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
 
-# Funktion: Artikel mit Bildern in Markdown erstellen
-def generate_article_with_pandoc(article_text, image_paths, output_directory="output", output_file="article.pdf"):
-    """
-    Erstellt einen Artikel in Markdown und konvertiert ihn mithilfe von Pandoc in ein PDF.
-    Bilder werden nach den entsprechenden Absätzen eingefügt.
-    """
-    # Stelle sicher, dass das Ausgabeverzeichnis existiert
-    os.makedirs(output_directory, exist_ok=True)
+    # Get the path of current_dir
+    current_dir = os.path.dirname(__file__)
 
-    # Temporäre Markdown-Datei
-    temp_markdown_file = "temp_article.md"
+    # Funktion zur Generierung der Bildunterschrift
+    def generate_image_caption(image_paths):
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
-    # Teile den Artikel in Absätze auf
-    paragraphs = answer.strip().split("\n\n")
-
-    # Generiere Markdown-Inhalt mit Bildern
-    markdown_content = ""
-    for i, paragraph in enumerate(paragraphs):
-        markdown_content += paragraph + "\n\n"
+        # Bild laden
+        image = Image.open(image_paths)
         
-        # Bild und Caption nach jedem Abschnitt einfügen (Bild 1 nach Abschnitt 1, Bild 2 nach Abschnitt 2, usw.)
-        if i < len(image_paths) and os.path.exists(image_paths[i]):
-            caption = captions[i]
-            markdown_content += f"![Image {i+1}]({image_paths[i]})\n"
-            markdown_content += f"**Caption: {caption}**\n\n"  # Bildunterschrift hinzufügen
-            
-    # Speichere den Markdown-Inhalt in einer Datei
-    with open(temp_markdown_file, "w", encoding="utf-8") as f:
-        f.write(markdown_content)
-
-    # Pfad zur Ausgabedatei
-    output_path = os.path.join(output_directory, output_file)
-
-    # Konvertiere Markdown zu PDF mit Pandoc
-    try:
-        subprocess.run(["pandoc", temp_markdown_file, "-o", output_path], check=True)
-        print(f"Article successfully generated as {output_path}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error while generating article with Pandoc: {e}")
-    finally:
-        # Entferne temporäre Markdown-Datei
-        if os.path.exists(temp_markdown_file):
-            os.remove(temp_markdown_file)
-            
-            
-# Liste von Bildpfaden
-current_dir = os.path.dirname(__file__)
-
-
-# Verarbeite die Antwort und generiere den Artikel
-if not answer:
-    print("No answer found in the response.")
-else:
-    
-    # Auswahl treffen, ob neue Bilder generiert werden sollen
-    user_choice = input("Do you want to generate new images using the diffusion model? (Yes/No): ").strip().lower()
-
-    if user_choice == "yes":
+        # Bildunterschrift generieren
+        inputs = processor(image, return_tensors="pt")
+        outputs = model.generate(**inputs, max_length=50)
+        caption = processor.decode(outputs[0], skip_special_tokens=True)
         
-        new_directory = "generated_images"
-        os.makedirs(new_directory, exist_ok=True)
-        
-        # Diffusionsmodell laden und Bilder generieren
-        pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5")
-        pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+        print(caption)
+        return caption
 
-        prompts = [
-            "A diagram about the history of sign language",
-            "A statistic about sign language",
-            f"An image showing the {detected_letter} in sign language",
-            "An image about the American Sign Language Alphabet",
-        ]
-        
-        image_paths = []
-        for i, prompt in enumerate(prompts, 1):
-            image = pipeline(prompt).images[0]
-            image_path = os.path.join(new_directory, f"image_{i}.png")
-            image.save(image_path)
-            image_paths.append(image_path)
-            
-        print(f"Generated images have been saved in the folder: {new_directory}")
+    # Funktion zur Bildgrößenanpassung (ohne Speichern)
+    def resize_image_in_memory(image_path, max_width, max_height):
+        """Passt die Größe eines Bildes im Speicher an, damit es nicht größer als max_width x max_height ist."""
+        with Image.open(image_path) as img:
+            img.thumbnail((max_width, max_height))  # Größe proportional anpassen
+            return img
 
+    # Funktion: Artikel mit Bildern in Markdown erstellen
+    def generate_article_with_pandoc(article_text, image_paths, output_directory="output", output_file="article.pdf"):
+        """
+        Erstellt einen Artikel in Markdown und konvertiert ihn mithilfe von Pandoc in ein PDF.
+        Bilder werden nach den entsprechenden Absätzen eingefügt.
+        """
+        # Stelle sicher, dass das Ausgabeverzeichnis existiert
+        os.makedirs(output_directory, exist_ok=True)
+
+        # Temporäre Markdown-Datei
+        temp_markdown_file = "temp_article.md"
+
+        # Teile den Artikel in Absätze auf
+        paragraphs = answer.strip().split("\n\n")
+        
+        #section_titles = [f"Section {i+1}" for i in range(len(paragraphs))]
+
+        # Generiere Markdown-Inhalt mit Bildern
+        markdown_content = ""
+        for i, paragraph in enumerate(paragraphs):
+            #markdown_content += f"## {section_titles[i]}\n"
+            markdown_content += paragraph + "\n\n"
+
+            # Bild und Caption mittig einfügen
+            if i < len(image_paths) and os.path.exists(image_paths[i]):
+                caption = captions[i]
+                resized_image = resize_image_in_memory(image_paths[i], max_width=200, max_height=200)
+                image_inline_path = os.path.join(output_directory, f"inlined_image_{i+1}.png")
+                resized_image.save(image_inline_path)  # Verkleinertes Bild temporär speichern
+                
+                markdown_content += f"![Image {i+1}]({image_inline_path})\n"
+                markdown_content += f"**Caption: {caption}**\n\n"
+
+            markdown_content += "\n"  # Leerzeile für Abstand zwischen Sektionen
+                
+        # Speichere den Markdown-Inhalt in einer Datei
+        with open(temp_markdown_file, "w", encoding="utf-8") as f:
+            f.write(markdown_content)
+
+        # Pfad zur Ausgabedatei
+        output_path = os.path.join(output_directory, output_file)
+
+        # Konvertiere Markdown zu PDF mit Pandoc
+        try:
+            subprocess.run(["pandoc", temp_markdown_file, "-o", output_path], check=True)
+            print(f"Article successfully generated as {output_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error while generating article with Pandoc: {e}")
+        finally:
+            # Entferne temporäre Markdown-Datei
+            if os.path.exists(temp_markdown_file):
+                os.remove(temp_markdown_file)
+                
+                
+    # Liste von Bildpfaden
+    current_dir = os.path.dirname(__file__)
+
+
+    # Verarbeite die Antwort und generiere den Artikel
+    if not answer:
+        print("No answer found in the response.")
     else:
         
-        # Standardbilder verwenden
-        print("Using default images.")
-        current_dir = os.path.dirname(__file__)
-        image_paths = [
-            os.path.join(current_dir, "DiffusionModelOutput", "article_image_1.png"),
-            os.path.join(current_dir, "DiffusionModelOutput", "article_image_2.png"),
-            os.path.join(current_dir, "DiffusionModelOutput", "article_image_3.png"),
-            os.path.join(current_dir, "DiffusionModelOutput", "article_image_4.png"),
-        ]
+        # Auswahl treffen, ob neue Bilder generiert werden sollen
+        user_choice = input("Do you want to generate new images using the diffusion model? (Yes/No): ").strip().lower()
 
-    # Bildunterschriften generieren
-    captions = []
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-    for image_path in image_paths:
-        if os.path.exists(image_path):
-            image = Image.open(image_path)
-            inputs = processor(image, return_tensors="pt")
-            outputs = blip_model.generate(**inputs, max_length=50)
-            caption = processor.decode(outputs[0], skip_special_tokens=True)
-            captions.append(caption)
+        if user_choice == "yes":
+            
+            new_directory = "generated_images"
+            os.makedirs(new_directory, exist_ok=True)
+            
+            # Diffusionsmodell laden und Bilder generieren
+            #pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5")
+            pipeline = DiffusionPipeline.from_pretrained("kakaobrain/karlo-v1-alpha")
+            #pipeline = DiffusionPipeline.from_pretrained("kandinsky-community/kandinsky-2-2-decoder")
+            pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+
+            prompts = [
+                f"an image of the {detected_letter}",
+                "an image of the alphabet ABC",
+                f"an image showing the sign of the {detected_letter} in american sign language",
+                "An image about the American Sign Language Alphabet"
+            ]
+            
+            image_paths = []
+            for i, prompt in enumerate(prompts, 1):
+                image = pipeline(prompt).images[0]
+                image_path = os.path.join(new_directory, f"image_{i}.png")
+                image.save(image_path)
+                image_paths.append(image_path)
+                
+            #for i, prompt in enumerate(prompts, 1):
+                # Negative Prompts (optional)
+            #    negative_prompt = "background clutter, multiple letters, handwritten, artistic, overly abstract, distorted letters, artistic fonts, blurry, low contrast, overlapping letters, text outside the alphabet, incorrect hand pose, blurry hands, extra hands, unrealistic lighting, cartoonish, background objects"
+                #negative_image_embeds = None   Set to None if not required
+                # Negative Embeddings generieren
+                #negative_image_embeds = pipeline.embed_text(negative_prompt)
+            
+                # Falls negative Prompts genutzt werden sollen:
+                # negative_image_embeds = pipeline.embed_text(negative_prompt)
+            
+            #    image = pipeline(prompt, negative_image_embeds=negative_prompt, prior_guidance_scale =1.0, height=768, width=768).images[0]
+            #    image_path = os.path.join(new_directory, f"image_{i}.png")
+            #    image.save(image_path)
+            #    image_paths.append(image_path)
+                
+            print(f"Generated images have been saved in the folder: {new_directory}")
+
         else:
-            captions.append("No caption available (image missing).")
+            
+            # Standardbilder verwenden
+            print("Using default images.")
+            current_dir = os.path.dirname(__file__)
+            image_paths = [
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_1.png"),
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_2.png"),
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_3.png"),
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_4.png"),
+            ]
 
-    output_directory = os.path.join(os.path.dirname(__file__), "Article")
-    output_file = input("Enter the file name for the article with extension (default: 'article.pdf'): ")
-    
-    # Generate the article as a PDF
-    print("Generating article with Pandoc...")
-    generate_article_with_pandoc(answer, image_paths, output_directory=output_directory, output_file=output_file)
-    print("Article saved.")
+        # Bildunterschriften generieren
+        captions = []
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+        for image_path in image_paths:
+            if os.path.exists(image_path):
+                image = Image.open(image_path)
+                inputs = processor(image, return_tensors="pt")
+                outputs = blip_model.generate(**inputs, max_length=50)
+                caption = processor.decode(outputs[0], skip_special_tokens=True)
+                captions.append(caption)
+            else:
+                captions.append("No caption available (image missing).")
+
+        output_directory = os.path.join(os.path.dirname(__file__), "Article")
+        output_file = input("Enter the file name for the article with extension (default: 'article.pdf'): ")
+        
+        # Generate the article as a PDF
+        print("Generating article with Pandoc...")
+        generate_article_with_pandoc(answer, image_paths, output_directory=output_directory, output_file=output_file)
+        print("Article saved.")
+
 
 if False:
+    # Retry mechanism for DuckDuckGo tool
+    class DuckDuckGoToolWithRetry:
+        def __init__(self, api_wrapper, max_retries=3, delay_between_retries=2):
+            self.tool = DuckDuckGoSearchResults(api_wrapper=api_wrapper)
+            self.max_retries = max_retries
+            self.delay_between_retries = delay_between_retries
+
+        def invoke(self, *args, **kwargs):
+            retries = 0
+            while retries < self.max_retries:
+                try:
+                    return self.tool.invoke(*args, **kwargs)
+                except Exception as e:
+                    print(f"DuckDuckGo tool error: {e}")
+                    retries += 1
+                    if retries < self.max_retries:
+                        print(f"Retrying DuckDuckGo tool... Attempt {retries + 1}")
+                        time.sleep(self.delay_between_retries)
+            print("DuckDuckGo tool failed after maximum retries. Skipping...")
+            return "The DuckDuckGo tool encountered an issue and was skipped."
+
+    # Initialize tools
+    wikipedia_wrapper = WikipediaAPIWrapper()
+    wikipedia_tool = WikipediaQueryRun(api_wrapper=wikipedia_wrapper)
+
+    duckduckgo_wrapper = DuckDuckGoSearchAPIWrapper(region="de-de", time="d", max_results=2)
+    duckduckgo_tool_with_retry = DuckDuckGoToolWithRetry(api_wrapper=duckduckgo_wrapper)
+
+    tools = [
+        Tool(name="Wikipedia", func=wikipedia_tool.run, description="Use this tool to search for information in Wikipedia."),
+        Tool(name="DuckDuckGo", func=duckduckgo_tool_with_retry.invoke, description="Search for information using DuckDuckGo.")
+    ]
+
+    # Response Schema and Structured Output Parser
+    response_schemas = [
+        ResponseSchema(name="answer", description="Answer to the user's question", type="str"),
+        ResponseSchema(
+            name="source",
+            description="Source used to answer the user's question, should be a website.",
+        ),
+    ]
+
+    output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+    format_instructions = output_parser.get_format_instructions()
+
+    # Define the prompt with format instructions
+    prompt = PromptTemplate(
+        #template="Answer the user's question as best as possible using the following format:\n{format_instructions}\nQuestion: {question}",
+        template="You must generate a response in strict JSON format. Use the following schema:\n{format_instructions}\nQuestion: {question}",
+        input_variables=["question"],
+        partial_variables={"format_instructions": format_instructions},
+    )
+
+
+    # LLM
+    model = OllamaLLM(model="llama3.1", temperature=0.7)
+
+    # Create chain with prompt, model, and output parser
+    def create_chain():
+        return prompt | model | output_parser
+
+    # Create the AgentExecutor
+    def create_agent_executor():
+        search_agent = create_react_agent(model, tools, prompt)
+        return AgentExecutor(
+            agent=search_agent,
+            tools=tools,
+            verbose=True,
+            return_intermediate_steps=True,
+        )
+        
+    # Funktion zur Bildgrößenanpassung (ohne Speichern)
+    def resize_image_in_memory(image_path, max_width, max_height):
+        """Passt die Größe eines Bildes im Speicher an, damit es nicht größer als max_width x max_height ist."""
+        with Image.open(image_path) as img:
+            img.thumbnail((max_width, max_height))  # Größe proportional anpassen
+            return img
+
+    def generate_letter_article(prediction_ViT, create_chain):
+        # Schritt 1: Buchstaben erkennen
+        detected_letter = chr(prediction_ViT + 65)  # Umwandlung von Index zu Buchstabe
+
+        # Schritt 2: Frage für das LLM erstellen
+        question = f"""
+        Write a concise article about the letter {detected_letter} in string format and its meaning in sign language. The article should include these four sections:
+
+        1. **Introduction**: What does the letter {detected_letter} symbolize and its meaning in different contexts?
+        2. **The letter in written language**: The role and use of the letter {detected_letter} in the alphabet and in words.
+        3. **The letter in sign language**: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
+        4. **Conclusion**: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+
+        Ensure each section is at least 250 words, and the total word count for the entire article should exceed 2000 words.
+        """
+
+        # Schritt 3: LLM ausführen und Antwort abrufen
+        chain = create_chain()
+        response = chain.invoke({"question": question})
+        answer = response.get("answer", "")
+        
+        if not answer:
+            print("No answer found in the response.")
+            return
+
+        # Schritt 4: Entscheidung zur Bildgenerierung
+        user_choice = input("Do you want to generate new images using the diffusion model? (Yes/No): ").strip().lower()
+
+        image_paths = []
+        if user_choice == "yes":
+            new_directory = "generated_images"
+            os.makedirs(new_directory, exist_ok=True)
+
+            pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5")
+            pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
+
+            prompts = [
+                f"an image of the {detected_letter}",
+                "an image of the alphabet",
+                f"an image showing the sign in sign language for the {detected_letter}",
+                "An image about the American Sign Language Alphabet"
+            ]
+
+            for i, prompt in enumerate(prompts, 1):
+                image = pipeline(prompt).images[0]
+                image_path = os.path.join(new_directory, f"image_{i}.png")
+                image.save(image_path)
+                image_paths.append(image_path)
+
+            print(f"Generated images have been saved in the folder: {new_directory}")
+        else:
+            print("Using default images.")
+            current_dir = os.path.dirname(__file__)
+            image_paths = [
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_1.png"),
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_2.png"),
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_3.png"),
+                os.path.join(current_dir, "DiffusionModelOutput", "article_image_4.png"),
+            ]
+
+        # Schritt 5: Bildunterschriften generieren
+        captions = []
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+
+        for image_path in image_paths:
+            if os.path.exists(image_path):
+                image = Image.open(image_path)
+                inputs = processor(image, return_tensors="pt")
+                outputs = blip_model.generate(**inputs, max_length=50)
+                caption = processor.decode(outputs[0], skip_special_tokens=True)
+                captions.append(caption)
+            else:
+                captions.append("No caption available (image missing).")
+
+        # Schritt 6: PDF-Generierung mit Pandoc
+        def generate_article_with_pandoc(article_text, image_paths, captions, output_directory="output", output_file="article.pdf"):
+            os.makedirs(output_directory, exist_ok=True)
+            temp_markdown_file = "temp_article.md"
+            paragraphs = article_text.strip().split("\n\n")
+
+            markdown_content = ""
+            for i, paragraph in enumerate(paragraphs):
+                markdown_content += paragraph + "\n\n"
+                if i < len(image_paths) and os.path.exists(image_paths[i]):
+                    # Größe des Bildes im Speicher anpassen
+                    resized_image = resize_image_in_memory(image_paths[i], max_width=200, max_height=200)
+                    image_inline_path = os.path.join(output_directory, f"inlined_image_{i+1}.png")
+                    resized_image.save(image_inline_path)  # Verkleinertes Bild temporär speichern
+            
+                markdown_content += f"![Image {i+1}]({image_inline_path})\n"
+                markdown_content += f"**Caption: {caption}**\n\n"
+
+            with open(temp_markdown_file, "w", encoding="utf-8") as f:
+                f.write(markdown_content)
+
+            output_path = os.path.join(output_directory, output_file)
+            try:
+                subprocess.run(["pandoc", temp_markdown_file, "-o", output_path], check=True)
+                print(f"Article successfully generated as {output_path}")
+            except subprocess.CalledProcessError as e:
+                print(f"Error while generating article with Pandoc: {e}")
+            finally:
+                if os.path.exists(temp_markdown_file):
+                    os.remove(temp_markdown_file)
+
+        # Benutzer nach Dateinamen fragen und Artikel generieren
+        output_directory = os.path.join(os.path.dirname(__file__), "Article")
+        output_file = input("Enter the file name for the article with extension (default: 'article.pdf'): ") or "article.pdf"
+        
+        # Generiere den Artikel als PDF
+        print("Generating article with Pandoc...")
+        generate_article_with_pandoc(answer, image_paths, captions, output_directory=output_directory, output_file=output_file)
+        print(f"Article saved as {os.path.join(output_directory, output_file)}")
+
+if True:
     # Retry mechanism for DuckDuckGo tool
     class DuckDuckGoToolWithRetry:
         def __init__(self, api_wrapper, max_retries=3, delay_between_retries=2):

@@ -12,6 +12,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 from sklearn.metrics import precision_recall_fscore_support
+from LLM_ollama_agent_Newparser import generate_letter_article, create_chain
 import os
 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
@@ -203,7 +204,7 @@ def initialize_model(num_classes):
 
 model = initialize_model(26)
 
-final_model = torch.load("ViT_model_dataset2_7.pth", map_location=torch.device('cpu'), weights_only=True)
+final_model = torch.load("ViT_model_dataset2_8.pth", map_location=torch.device('cpu'), weights_only=True)
 model.load_state_dict(final_model)
 
 model.eval()
@@ -217,6 +218,8 @@ print(f'ViT prediction: {prediction_ViT}')
 
 
 ### LLM
+generate_letter_article(prediction_ViT, create_chain)
+
 """
 # Load diffusion model picture
 image_path = os.path.join(current_dir, "DiffusionModelOutput", 'generated_image.png')  # Change the path as needed
