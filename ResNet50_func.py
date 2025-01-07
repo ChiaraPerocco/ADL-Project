@@ -1,18 +1,23 @@
+import numpy as np
 import torch
 import torch.nn as nn
-from torchvision import datasets
-from torchvision import transforms
+from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+from torchvision.models import resnet50, ResNet50_Weights
 import torch.optim as optim
-import numpy as np
-from sklearn.metrics import precision_recall_fscore_support
 import os
 import wandb
 import copy
+from sklearn.metrics import precision_recall_fscore_support
 
 # Definiere den absoluten Pfad des aktuellen Skripts
 current_dir = os.path.dirname(__file__)
 print(current_dir)
+
+# Pfade zu den Datensätzen
+dataset_train = os.path.join(current_dir, "Sign Language 2", "train_processed")
+dataset_val = os.path.join(current_dir, "Sign Language 2", "val_processed")
+dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 
 # Hyperparameter
 num_classes = 26
@@ -20,84 +25,22 @@ num_classes = 26
 batch_size = 64
 learning_rate = 0.0008
 num_epochs = 50
-num_workers = 2
+num_workers = 2  # Dies bleibt in der main Funktion, wie du es gewünscht hast
 drop_out_rate = 0.3
-
-class AlexNet(nn.Module):
-    def __init__(self, num_classes=num_classes):
-        super(AlexNet, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=0),
-            nn.BatchNorm2d(96),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(96, 256, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(256, 384, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(384),
-            nn.ReLU())
-        self.layer4 = nn.Sequential(
-            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(384),
-            nn.ReLU())
-        self.layer5 = nn.Sequential(
-            nn.Conv2d(384, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.fc = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(6400, 4096),
-            nn.ReLU())
-        self.fc1 = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
-            nn.ReLU())
-        self.fc2= nn.Sequential(
-            nn.Linear(4096, num_classes))
-
-    def forward(self, x):
-        out = self.layer1(x)
-        print("Layer 1 Output Shape:", out.shape)
-        out = self.layer2(out)
-        print("Layer 2 Output Shape:", out.shape)
-        out = self.layer3(out)
-        print("Layer 3 Output Shape:", out.shape)
-        out = self.layer4(out)
-        print("Layer 4 Output Shape:", out.shape)
-        out = self.layer5(out)
-        print("Layer 5 Output Shape:", out.shape)
-        out = out.reshape(out.size(0), -1)
-        out = self.fc(out)
-        out = self.fc1(out)
-        out = self.fc2(out)
-        return out
-    
-
-# Pfade zu den Datensätzen
-dataset_train = os.path.join(current_dir, "Sign Language 2", "train_processed")
-dataset_val = os.path.join(current_dir, "Sign Language 2", "val_processed")
-dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
-
-
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 
 # W&B Initialisierung – nur einmal in der main() Funktion
 def initialize_wandb():
-    wandb.init(project="alexnet_model_dataset2_4", config={
+    wandb.init(project="resent50_model_dataset2_4", config={
         'batch_size': batch_size,
         'learning_rate': learning_rate,
         'num_epochs': num_epochs,
         'drop_out': drop_out_rate
         
     })
-    wandb.run.name = "Third_Run"  # Optional, benenne den Run
+    wandb.run.name = "Second_Run"  # Optional, benenne den Run
 
 # Transformationen und DataLoader
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
@@ -143,15 +86,30 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
 
 # Modell initialisieren
 def initialize_model(num_classes):
-    # load model
-    model = AlexNet(num_classes).to(device) 
+    # Lade das vortrainierte Modell ResNet50
+    model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    
+    # Alle Schichten einfrieren, außer der letzten
+    for param in model.parameters():
+        param.requires_grad = False
+    for param in model.fc.parameters():
+        param.requires_grad = True
+
+    # Ersetze die letzte Schicht (Fully Connected Layer)
+    model.fc = nn.Sequential(
+        nn.Dropout(drop_out_rate),  # Dropout hinzugefügt
+        nn.Linear(model.fc.in_features, num_classes)
+    )
+    
+    model = model.to(device)
+
 
     return model
 
 # Training des finalen Modells
 def train_final_model(model, train_loader, valid_loader, best_params):
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=best_params['learning_rate'], weight_decay=0.005)
+    optimizer = optim.Adam(model.fc.parameters(), lr=best_params['learning_rate'], weight_decay=0.005)
 
     train_losses, train_accuracies, val_losses, val_accuracies = [], [], [], []
 
@@ -228,8 +186,8 @@ def train_final_model(model, train_loader, valid_loader, best_params):
     model.load_state_dict(best_model_weights)
 
     # Speichern des besten Modells
-    torch.save(model.state_dict(), "alexnet_model_dataset2_4.pth")
-    print("Bestes Modell gespeichert als 'alexnet_model_dataset2_4.pth'.")
+    torch.save(model.state_dict(), "resent50_model_dataset2_4.pth")
+    print("Bestes Modell gespeichert als 'resent50_model_dataset2_4.pth'.")
 
     return model
 
