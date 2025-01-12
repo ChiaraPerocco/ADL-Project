@@ -580,9 +580,5 @@ def generate_article(detected_letter):
         print("Article saved.")
 
 
-
-detected_letter = ['W']
-generate_article(detected_letter)
-    
    
 
