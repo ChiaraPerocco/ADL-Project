@@ -23,17 +23,17 @@ dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 num_classes = 26
 
 batch_size = 64
-learning_rate = 0.0008
+learning_rate = 0.001
 num_epochs = 50
 num_workers = 2  # Dies bleibt in der main Funktion, wie du es gewünscht hast
-drop_out_rate = 0.3
+drop_out_rate = 0.2
 # Device configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 
 # W&B Initialisierung – nur einmal in der main() Funktion
 def initialize_wandb():
-    wandb.init(project="resent50_model_dataset2_4", config={
+    wandb.init(project="resnet50_model_dataset2_5", config={
         'batch_size': batch_size,
         'learning_rate': learning_rate,
         'num_epochs': num_epochs,
@@ -115,7 +115,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
 
     best_loss = float('inf')
     best_model_weights = None
-    patience = 3  # Für Early Stopping
+    patience = 5  # Für Early Stopping
 
     for epoch in range(best_params['num_epochs']):
         model.train()
@@ -175,7 +175,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())
-            patience = 3  # Resette Patience
+            patience = 5  # Resette Patience
         else:
             patience -= 1
             if patience == 0:
@@ -186,8 +186,8 @@ def train_final_model(model, train_loader, valid_loader, best_params):
     model.load_state_dict(best_model_weights)
 
     # Speichern des besten Modells
-    torch.save(model.state_dict(), "resent50_model_dataset2_4.pth")
-    print("Bestes Modell gespeichert als 'resent50_model_dataset2_4.pth'.")
+    torch.save(model.state_dict(), "resnet50_model_dataset2_5.pth")
+    print("Bestes Modell gespeichert als 'resnet50_model_dataset2_5.pth'.")
 
     return model
 
