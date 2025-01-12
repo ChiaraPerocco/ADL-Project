@@ -114,6 +114,11 @@ def generate_image_caption(image_paths):
 """
 
 
+def remove_non_printable(text):
+    # Filtert alle Zeichen, die nicht druckbar sind (außer Tab, Newline und Wagenrücklauf)
+    return ''.join(char for char in text if char.isprintable() or char in ['\t', '\n', '\r'])
+
+
 # Funktion zur Bildgrößenanpassung (ohne Speichern)
 def resize_image_in_memory(image_path, max_width, max_height):
     """Passt die Größe eines Bildes im Speicher an, damit es nicht größer als max_width x max_height ist."""
@@ -214,6 +219,7 @@ def generate_article_with_pandoc(answer, source, captions, image_paths, output_d
 
     markdown_content = chapters[0] + "\n"
     markdown_content += "\n"
+    markdown_content += "\n"
     
     """
     # Füge Bilder nach jedem Kapitel ein
@@ -249,14 +255,22 @@ def generate_article_with_pandoc(answer, source, captions, image_paths, output_d
             markdown_content += f"\n"
             #markdown_content += f"**Caption: {caption}**\n\n"
             
-        markdown_content += f"\n"
+        markdown_content += "\n"
 
-        markdown_content += f"\n"
+    markdown_content += "\n"
 
-        markdown_content += f"source: {source}"
+    markdown_content += f"Source: {source}"
+
+    print("MD1:", markdown_content)
 
 
-    print("MD:", markdown_content)
+    output_string = remove_non_printable(markdown_content)
+
+    #markdown_content = re.sub(r'[\x00-\x1F\x7F]', '', output_string)
+
+    markdown_content = output_string
+  
+    print("MD2:", markdown_content)
 
     # Speichere den Markdown-Inhalt in einer Datei
     with open(temp_markdown_file, "w", encoding="utf-8") as f:
@@ -267,7 +281,7 @@ def generate_article_with_pandoc(answer, source, captions, image_paths, output_d
 
     # Konvertiere Markdown zu PDF mit Pandoc
     try:
-        subprocess.run(["pandoc", temp_markdown_file, "-o", output_path], check=True)
+        subprocess.run(["pandoc", temp_markdown_file, "-o", output_path, "--pdf-engine=xelatex"], check=True)
         print(f"Article successfully generated as {output_path}")
     except subprocess.CalledProcessError as e:
         print(f"Error while generating article with Pandoc: {e}")
@@ -285,26 +299,24 @@ def generate_article(detected_letter):
     
     #detected_letter = ['B']
 
-    if True:
-        question = f"""
-        You must write a structured article in string format with the following requirements:
-    
-        ## The letter {detected_letter} in American Sign Language
+ 
+    question = f"""
+    You must write a structured article in string format with the following requirements:
 
-        Divide the article into four sections:
-        1. ### Introduction: What does the letter {detected_letter} symbolize and its meaning in different contexts?
-        2. ### The letter in written language: The role and use of the letter {detected_letter} in the alphabet and in words.
-        3. ### The letter in sign language: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
-        4. ### Conclusion: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+    ## The letter {detected_letter} in American Sign Language
 
-        The total word count for the article should exceed 2000 words, with each section containing at least 250 words.
-        """
+    Divide the article into four sections:
+    1. ### Introduction: What does the letter {detected_letter} symbolize and its meaning in different contexts?
+    2. ### The letter in written language: The role and use of the letter {detected_letter} in the alphabet and in words.
+    3. ### The letter in sign language: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
+    4. ### Conclusion: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
+
+    The total word count for the article should exceed 2000 words, with each section containing at least 250 words.
+    """
 
     #question = f"""
     #What does the letter {detected_letter} symbolize and its meaning in different contexts?
     #"""
-
-
 
 
     output_parser = CustomOutputParserOrg()
@@ -569,6 +581,8 @@ def generate_article(detected_letter):
 
 
 
-
-
+detected_letter = ['W']
+generate_article(detected_letter)
+    
+   
 
