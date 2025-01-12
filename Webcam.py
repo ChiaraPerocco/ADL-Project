@@ -45,12 +45,12 @@ if True:
             # Wait for a key press; check every "delay" milliseconds if a key is pressed
             key = cv2.waitKey(delay) & 0xFF
             # If the 'c' key is pressed, save the frame and exit the loop
-            if key == ord('c'):
+            if key == ord('y'):
                 cv2.imwrite('{}_{}.{}'.format(base_path, n, ext), frame)
                 n += 1
                 break
             # If the 'q' key is pressed, exit the loop without saving
-            elif key == ord('q'):
+            elif key == ord('n'):
                 break
             
         # Close the opened webcam window
