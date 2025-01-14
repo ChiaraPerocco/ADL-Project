@@ -26,15 +26,13 @@ from captum.attr import Saliency
 import matplotlib.pyplot as plt 
 from sklearn.metrics import  confusion_matrix
 import seaborn as sns
-"""
+
 # Absolut path of current script
 current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
-dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
-dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
+dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 
 # Number of classes in data set
 num_classes = 26
@@ -211,7 +209,7 @@ plt.title('Confusion Matrix Alexnet')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
-"""
+
 
 # Create train, val loss and train, val accuracy plots
 import wandb
@@ -251,7 +249,7 @@ ax2.legend(loc='lower left')
 plt.show()
 
 # Saliency Maps
-if False:
+if True:
         
     """ 
         Implement GradCAM
@@ -431,7 +429,7 @@ if False:
 
 
     #save_path = os.path.join(current_dir, "Saliency Map", "results")
-    save_path = os.path.join(current_dir, "Saliency Maps_alexnet_dataset2_4", "results_alexnet_dataset2_4")
+    save_path = os.path.join(current_dir, "Saliency Maps_alexnet_dataset2_4_v2", "results_alexnet_dataset2_4_v2")
     os.makedirs(save_path, exist_ok=True)
     create_folder(save_path)
     compute_saliency_and_save()
