@@ -308,7 +308,7 @@ def generate_article(detected_letter):
     Divide the article into four sections:
     1. ### Introduction: What does the letter {detected_letter} symbolize and its meaning in different contexts?
     2. ### The letter in written language: The role and use of the letter {detected_letter} in the alphabet and in words.
-    3. ### The letter in sign language: How is the {detected_letter} represented in American Sign Language (ASL)? Break down the steps with detailed instructions on how to sign the {detected_letter} in the American Sign Language Alphabet.
+    3. ### The letter in sign language: Which hand shape does the {detected_letter} represent in the ASL alphabet?
     4. ### Conclusion: Connect written language and sign language and reflect on the role of the letter {detected_letter}.
 
     The total word count for the article should exceed 2000 words, with each section containing at least 250 words.
