@@ -18,10 +18,10 @@ print(current_dir)
 num_classes = 26
 
 batch_size = 64
-learning_rate = 0.0008
+learning_rate = 0.0009
 num_epochs = 50
 num_workers = 2
-drop_out_rate = 0.3
+drop_out_rate = 0.2
 
 class AlexNet(nn.Module):
     def __init__(self, num_classes=num_classes):
@@ -90,14 +90,14 @@ print(device)
 
 # W&B Initialisierung – nur einmal in der main() Funktion
 def initialize_wandb():
-    wandb.init(project="alexnet_model_dataset2_4", config={
+    wandb.init(project="alexnet_model_dataset2_5", config={
         'batch_size': batch_size,
         'learning_rate': learning_rate,
         'num_epochs': num_epochs,
         'drop_out': drop_out_rate
         
     })
-    wandb.run.name = "Third_Run"  # Optional, benenne den Run
+    wandb.run.name = "Final_Run_v2"  # Optional, benenne den Run
 
 # Transformationen und DataLoader
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
@@ -157,7 +157,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
 
     best_loss = float('inf')
     best_model_weights = None
-    patience = 3  # Für Early Stopping
+    patience = 10  # Für Early Stopping
 
     for epoch in range(best_params['num_epochs']):
         model.train()
@@ -217,7 +217,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())
-            patience = 3  # Resette Patience
+            patience = 10  # Resette Patience
         else:
             patience -= 1
             if patience == 0:
@@ -228,8 +228,8 @@ def train_final_model(model, train_loader, valid_loader, best_params):
     model.load_state_dict(best_model_weights)
 
     # Speichern des besten Modells
-    torch.save(model.state_dict(), "alexnet_model_dataset2_4.pth")
-    print("Bestes Modell gespeichert als 'alexnet_model_dataset2_4.pth'.")
+    torch.save(model.state_dict(), "alexnet_model_dataset2_5.pth")
+    print("Bestes Modell gespeichert als 'alexnet_model_dataset2_5.pth'.")
 
     return model
 
