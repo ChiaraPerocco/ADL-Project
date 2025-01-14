@@ -57,7 +57,7 @@ if True:
         cv2.destroyWindow("Webcam")
 
 
-    save_frame_camera_key('camera_capture', dir_path=dir_path)
+    #save_frame_camera_key('camera_capture', dir_path=dir_path)
 
 
 if False: 

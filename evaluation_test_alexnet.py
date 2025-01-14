@@ -32,9 +32,7 @@ current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
-dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
-dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
+dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 
 # Number of classes in data set
 num_classes = 26
@@ -210,6 +208,44 @@ sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
 plt.title('Confusion Matrix Alexnet')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
+plt.show()
+
+
+# Create train, val loss and train, val accuracy plots
+import wandb
+api = wandb.Api()
+run = api.run("annaretr01-hochschule-m-nchen/alexNet_model_dataset2_4/fqi3euux")  # Beispiel: "username/projectname/run-id"
+# Verfügbare Spalten anzeigen
+history = run.history(keys=["train_loss", "train_acc", "val_loss", "val_acc"])
+print(history["train_loss"])
+
+
+import matplotlib.pyplot as plt
+
+# Validation and training Loss/accuracy
+epochs = range(len(history["train_loss"]))
+
+# Plot with two y-axis one for accuracy, one for loss
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Plot loss on the left y-axis
+ax1.plot(epochs, history["train_loss"], label="train loss", color='r')
+ax1.plot(epochs, history["val_loss"], label="validation loss", color='b')
+ax1.set_xlabel('Epoch')
+ax1.set_ylabel('Loss')
+ax1.tick_params(axis='y')
+
+# Create another y-axis for accuracy
+ax2 = ax1.twinx()
+ax2.plot(epochs, history["train_acc"], label="train accuracy", color='g')
+ax2.plot(epochs, history["val_acc"], label="validation accuracy", color='y')
+ax2.set_ylabel('Accuracy')
+ax2.tick_params(axis='y')
+
+# Add legends
+ax1.legend(loc='upper left')
+ax2.legend(loc='lower left')
+
 plt.show()
 
 # Saliency Maps
@@ -393,7 +429,7 @@ if True:
 
 
     #save_path = os.path.join(current_dir, "Saliency Map", "results")
-    save_path = os.path.join(current_dir, "Saliency Maps_alexnet_dataset2_4", "results_alexnet_dataset2_4")
+    save_path = os.path.join(current_dir, "Saliency Maps_alexnet_dataset2_4_v2", "results_alexnet_dataset2_4_v2")
     os.makedirs(save_path, exist_ok=True)
     create_folder(save_path)
     compute_saliency_and_save()
