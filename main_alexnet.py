@@ -11,6 +11,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 from sklearn.metrics import precision_recall_fscore_support
+from LLM_final import generate_article
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] ='0' # enable oneDNN custom operations --> different numericl results due to floating-point round-off errors from different computation errors
 ### Import functions
@@ -28,7 +29,8 @@ output_folder = os.path.join(current_dir, "webcam_images_processed")
 # Erstelle den Zielordner, falls er nicht existiert
 os.makedirs(output_folder, exist_ok=True)
 # Aufnahme des Kamerabildes
-#save_frame_camera_key('camera capture', dir_path=input_folder)
+save_frame_camera_key('camera capture', dir_path=input_folder)
+
 # Check if the directory contains any files and delete them if necessary
 # Alle .jpg-Dateien im Ordner löschen
 for datei in os.listdir(output_folder):
@@ -166,3 +168,21 @@ model.eval()
 # Run the model with the saved images from the webcam
 prediction_alexnet = test_model(model, test_loader)
 print(f'Alexnet prediction: {prediction_alexnet}')
+
+# change the predicted class into the letter
+
+# Funktion zur Umwandlung einer Zahl in einen Buchstaben
+def letter(number):
+    # Basis-Buchstaben von A-Z (ASCII 65-90)
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    # Die Zahl mod 26 nehmen, um sie in den Bereich 0-25 zu bringen
+    index = number % 26
+    # Den entsprechenden Buchstaben aus dem Alphabet auswählen
+    return alphabet[index]
+
+# Umwandlung in Buchstaben
+detected_letter = letter(prediction_alexnet)
+
+print(f"Die vorhergesagte Zahl {prediction_alexnet} entspricht dem Buchstaben '{detected_letter}'.")
+
+generate_article(detected_letter)
