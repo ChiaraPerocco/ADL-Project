@@ -144,8 +144,14 @@ if __name__ == "__main__":
     num_epochs = 50
     num_classes = 26
 
+
+    # Pfad zur JSON-Datei erstellen
+    current_dir = os.path.dirname(__file__)
+
+    model_path = os.path.join(current_dir, "Models", "alexnet_model_dataset2_4.pth")
     model = initialize_model(num_classes)
-    final_model = torch.load("alexnet_model_dataset2_4.pth", map_location=torch.device('cpu'), weights_only=True)
+    #final_model = torch.load("./alexnet_model_dataset2_4.pth", map_location=torch.device('cpu'), weights_only=True)
+    final_model = torch.load(model_path, map_location=torch.device('cpu'), weights_only=True)
     model.load_state_dict(final_model)
     model.eval()
 
