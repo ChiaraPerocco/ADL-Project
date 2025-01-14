@@ -10,7 +10,7 @@ import os
 import wandb
 import copy
 
-# Definiere den absoluten Pfad des aktuellen Skripts
+# define absolut path
 current_dir = os.path.dirname(__file__)
 print(current_dir)
 
@@ -78,7 +78,7 @@ class AlexNet(nn.Module):
         return out
     
 
-# Pfade zu den Datensätzen
+# paths of datasets
 dataset_train = os.path.join(current_dir, "Sign Language 2", "train_processed")
 dataset_val = os.path.join(current_dir, "Sign Language 2", "val_processed")
 dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
@@ -88,7 +88,7 @@ dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 
-# W&B Initialisierung – nur einmal in der main() Funktion
+# W&B initialization
 def initialize_wandb():
     wandb.init(project="alexnet_model_dataset2_5", config={
         'batch_size': batch_size,
@@ -97,16 +97,16 @@ def initialize_wandb():
         'drop_out': drop_out_rate
         
     })
-    wandb.run.name = "Final_Run_v2"  # Optional, benenne den Run
+    wandb.run.name = "Final_Run_v2"  
 
-# Transformationen und DataLoader
+# Transformation und DataLoader
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
     normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
 
-    # Validierungstransformation
+    # validation transformation
     valid_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize])
 
-    # Trainingsdaten Augmentierung
+    # augmentation of traindata
     if augment:
         train_transform = transforms.Compose([
             transforms.Resize((256, 256)),
@@ -141,14 +141,14 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
 
     return test_loader
 
-# Modell initialisieren
+# initialize model
 def initialize_model(num_classes):
     # load model
     model = AlexNet(num_classes).to(device) 
 
     return model
 
-# Training des finalen Modells
+# train final model
 def train_final_model(model, train_loader, valid_loader, best_params):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=best_params['learning_rate'], weight_decay=0.005)
@@ -157,7 +157,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
 
     best_loss = float('inf')
     best_model_weights = None
-    patience = 10  # Für Early Stopping
+    patience = 10  # for earlyStopping
 
     for epoch in range(best_params['num_epochs']):
         model.train()
@@ -182,7 +182,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
         train_losses.append(epoch_loss)
         train_accuracies.append(epoch_acc.item())
 
-        # Validierung
+        # validation
         model.eval()
         val_loss = 0.0
         val_corrects = 0
@@ -207,7 +207,7 @@ def train_final_model(model, train_loader, valid_loader, best_params):
               f"Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_acc:.4f}, "
               f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
 
-        # Logge Metriken zu W&B
+        # Logging metrics to wandb
         wandb.log({
             "train_loss": epoch_loss, "train_acc": epoch_acc,
             "val_loss": val_loss, "val_acc": val_acc
@@ -217,23 +217,23 @@ def train_final_model(model, train_loader, valid_loader, best_params):
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())
-            patience = 10  # Resette Patience
+            patience = 10  # Reset Patience
         else:
             patience -= 1
             if patience == 0:
                 print("Early Stopping")
                 break
 
-    # Beste Modellgewichte laden
+    # load best model weights
     model.load_state_dict(best_model_weights)
 
-    # Speichern des besten Modells
+    # save best model
     torch.save(model.state_dict(), "alexnet_model_dataset2_5.pth")
     print("Bestes Modell gespeichert als 'alexnet_model_dataset2_5.pth'.")
 
     return model
 
-# Testen des Modells
+# test the model
 def test_model(model, test_loader):
     model.eval()
     test_corrects = 0
@@ -258,32 +258,32 @@ def test_model(model, test_loader):
 
     return test_acc, precision, recall, f1
 
-# Hauptfunktion
+# main-function
 def main():
-    # Lade Trainings- und Validierungsdaten
+    # load train and validation data
     train_loader, valid_loader = get_train_valid_loader(dataset_train, dataset_val, batch_size, augment=True)
     test_loader = get_test_loader(dataset_test, batch_size)
 
-    # Initialisiere das Modell
+    # initialize model
     model = initialize_model(num_classes)
 
-    # Initialisiere W&B
+    # initialize W&B
     initialize_wandb()
 
-    # Trainiere das Modell
+    # train model
     best_params = {'learning_rate': learning_rate, 'num_epochs': num_epochs}
     model = train_final_model(model, train_loader, valid_loader, best_params)
 
-    # Teste das Modell
+    # test model
     test_acc, precision, recall, f1 = test_model(model, test_loader)
 
-    # Logge die Testergebnisse zu W&B
+    # Logging testing results to W&B
     wandb.log({
         "test_acc": test_acc, "precision": precision,
         "recall": recall, "f1": f1
     })
 
-    # Rufe noch wandb.finish() auf!!
+   
 
 if __name__ == "__main__":
     main() 

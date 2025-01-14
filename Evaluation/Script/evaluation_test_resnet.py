@@ -46,16 +46,16 @@ def get_test_loader(data_dir,
     )
 
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),   #Bildgröße anpassen
+        transforms.Resize((224, 224)),   # adjust image size
         transforms.ToTensor(),
         normalize,
     ])
     
 
-    # Lade den Testdatensatz
+    # load testdata
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
-    # Erstellen des DataLoaders für Testdaten
+    # create dataloader for testdata
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
     return test_loader
@@ -64,7 +64,7 @@ def get_test_loader(data_dir,
 batch_size = 64
 learning_rate = 0.001
 num_epochs = 50
-num_workers = 2  # Dies bleibt in der main Funktion, wie du es gewünscht hast
+num_workers = 2  
 drop_out_rate = 0.2
 
 
@@ -80,76 +80,20 @@ test_loader = get_test_loader(
     batch_size=best_params['batch_size']
 )
 
-# Load AlexNet class
-class AlexNet(nn.Module):
-    def __init__(self, num_classes=num_classes):
-        super(AlexNet, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=0),
-            nn.BatchNorm2d(96),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(96, 256, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(256, 384, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(384),
-            nn.ReLU())
-        self.layer4 = nn.Sequential(
-            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(384),
-            nn.ReLU())
-        self.layer5 = nn.Sequential(
-            nn.Conv2d(384, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size = 3, stride = 2))
-        self.fc = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(6400, 4096),
-            nn.ReLU())
-        self.fc1 = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
-            nn.ReLU())
-        self.fc2= nn.Sequential(
-            nn.Linear(4096, num_classes))
-    def forward(self, x):
-        out = self.layer1(x)
-        print("Layer 1 Output Shape:", out.shape)
-        out = self.layer2(out)
-        print("Layer 2 Output Shape:", out.shape)
-        out = self.layer3(out)
-        print("Layer 3 Output Shape:", out.shape)
-        out = self.layer4(out)
-        print("Layer 4 Output Shape:", out.shape)
-        out = self.layer5(out)
-        print("Layer 5 Output Shape:", out.shape)
-        out = out.reshape(out.size(0), -1)
-        out = self.fc(out)
-        out = self.fc1(out)
-        out = self.fc2(out)
-        return out
-
-
-# Modell initialisieren
-# Modell initialisieren
+# initialize model
 def initialize_model(num_classes):
-    # Lade das vortrainierte Modell ResNet50
+    # load pretrained ResNet50 model
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     
-    # Alle Schichten einfrieren, außer der letzten
+    # freeze all layers except the last one
     for param in model.parameters():
         param.requires_grad = False
     for param in model.fc.parameters():
         param.requires_grad = True
 
-    # Ersetze die letzte Schicht (Fully Connected Layer)
+    # replace the fully connected layer
     model.fc = nn.Sequential(
-        nn.Dropout(drop_out_rate),  # Dropout hinzugefügt
+        nn.Dropout(drop_out_rate),  # Dropout 
         nn.Linear(model.fc.in_features, num_classes)
     )
     
@@ -185,8 +129,6 @@ def test_model(model, test_loader):
             _, preds = torch.max(outputs, 1)
             test_corrects += torch.sum(preds == labels.data)
 
-
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
             all_labels_ViT.extend(labels.cpu().numpy())
             all_preds_ViT.extend(preds.cpu().numpy())
 
@@ -194,10 +136,10 @@ def test_model(model, test_loader):
     true_labels = [class_names[i] for i in all_labels_ViT]
     predicted_labels = [class_names[i] for i in all_preds_ViT]
 
-    # Berechnung der Test Accuracy
+    # calculate test Accuracy
     test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
     print(f'Test Accuracy: {test_acc_ViT:.4f}')
-    # Berechnung von Precision, Recall und F1-Score
+    # calculate Precision, Recall und F1-Score
     precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
         
     print(f'Test Accuracy: {test_acc_ViT:.4f}')
@@ -207,14 +149,14 @@ def test_model(model, test_loader):
         
     print(f'Labels Testdaten: {true_labels}')
     print(f'vorhergesagte Testdaten: {predicted_labels}')
-    # Rückgabe der Metriken
+    # return metrics
     return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
 
-# Testen auf Testdaten und Speichern der Metriken und label
+# test and save metrics and labels
 test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(model, test_loader)
 
 
-### Confusion Matrix:
+### Confusion Matrix
 conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
 # Visualizing Confusion Matrix

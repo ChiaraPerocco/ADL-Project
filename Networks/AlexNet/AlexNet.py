@@ -147,11 +147,11 @@ class AlexNet(nn.Module):
         out = self.fc2(out)
         return out
     
-# Erstelle die besten Hyperparameter als Dictionary
+# create best hyperparameters as dictionary
 best_params = {
-    'learning_rate': 0.01,  # Beispielwert
-    'batch_size': 64,      # Beispielwert
-    'num_epochs': 50       # Beispielwert
+    'learning_rate': 0.01,  
+    'batch_size': 64,      
+    'num_epochs': 50      
 }
 
 
@@ -351,7 +351,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
         base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0
     )
 
-    # Variablen für Metriken und EarlyStopping
+    # variables fpr metrics and EarlyStopping
     best_loss = float('inf')
     best_model_weights = None
     patience = 5
@@ -359,16 +359,16 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     train_losses, train_accuracies = [], []
     val_losses, val_accuracies = [], []
     
-    # Funktion, um die Lernrate zu bekommen
+    # getting learningrate
     def get_lr(optimizer):
         for param_group in optimizer.param_groups:
             return param_group['lr']
 
-    # Funktion, um das Momentum zu bekommen
+    # getting momentum
     def get_momentum(optimizer):
         return optimizer.param_groups[0]['momentum']
 
-    # Beste Lernrate und Momentum speichern
+    # save best learningrate and momentum
     best_lr = None
     best_momentum = None
 
@@ -446,7 +446,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss:.4f}, Accuracy: {val_acc:.4f}")
 
-        # Logge Metriken zu wandb
+        # Logging metrics to wandb
         wandb.log({
             "train acc": epoch_acc,
             "train loss": epoch_loss,
@@ -456,7 +456,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
             "momentum": current_momentum
         })
 
-        # Prüfe auf Early Stopping
+        # checking for earlyStopping
         # Early stopping
         if val_loss < best_loss:
             best_loss = val_loss
@@ -471,36 +471,36 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
             if patience_counter == 0:
                 break
 
-    # Modell mit den besten Gewichtungen speichern
+    # save model with best weights
     model.load_state_dict(best_model_weights)
 
-    # Speichern des besten Lernraten- und Momentumwertes
+    # save checkpoints
     checkpoint = {
         'train_losses': train_losses,
         'train_accuracies': train_accuracies,
         'val_losses': val_losses,
         'val_accuracies': val_accuracies,
-        'best_lr': best_lr,  # Speichern der besten Lernrate
-        'best_momentum': best_momentum,  # Speichern des besten Momentums
+        'best_lr': best_lr,  
+        'best_momentum': best_momentum,  
         'hyper_params': best_params,
     }
 
-    # Speichern des Modells und der Metriken
+    # save model and metrics
     eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
     os.makedirs(eval_folder_path, exist_ok=True)
     torch.save(checkpoint, os.path.join(eval_folder_path, "alexNet_values_dataset2_4.pth"))
 
-    # W&B beenden
+    # finish wandb
     wandb.finish()
 
     return model
 
-# Trainiere das finale Modell mit den besten Hyperparametern
+# train model wirh best hyperparameters
 final_model = train_final_model(best_params, dataset_train, dataset_val, device)
 
 # Load test data
 test_loader = get_test_loader(
-    data_dir= dataset_test, # Pfad zu den Testdaten
+    data_dir= dataset_test, # path to testdata
     batch_size=best_params['batch_size']
 )
 
@@ -525,7 +525,7 @@ if False:
                 test_corrects += torch.sum(preds == labels.data)
 
 
-                # Speichern der Labels und Vorhersagen für spätere Auswertungen
+                
                 all_labels_alexNet.extend(labels.cpu().numpy())
                 all_preds_alexNet.extend(preds.cpu().numpy())
 
@@ -533,11 +533,11 @@ if False:
         #true_labels = [class_names[i] for i in all_labels_alexNet]
         #predicted_labels = [class_names[i] for i in all_preds_alexNet]
 
-        # Berechnung der Test Accuracy
+        # calculate accuracy
         test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
         print(f'Test Accuracy: {test_acc_alexNet:.4f}')
 
-        # Berechnung von Precision, Recall und F1-Score
+        # calculate Precision, Recall und F1-Score
         precision_alexNet, recall_alexNet, f1_alexNet, _ = precision_recall_fscore_support(all_labels_alexNet, all_preds_alexNet, average='weighted')
         
         print(f'Test Accuracy: {test_acc_alexNet:.4f}')
@@ -547,10 +547,10 @@ if False:
         
         print(f'Labels Testdaten: {all_labels_alexNet}')
         print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
-        # Rückgabe der Metriken
+        # return metrics
         return test_acc_alexNet.item(), precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet
 
-    # Testen auf Testdaten und Speichern der Metriken und label
+    # test on testdata and save metrics and labels
     test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(final_model, test_loader)
 
 
