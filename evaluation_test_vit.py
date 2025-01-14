@@ -26,15 +26,13 @@ from captum.attr import Saliency
 import matplotlib.pyplot as plt 
 from sklearn.metrics import  confusion_matrix
 import seaborn as sns
-"""
+
 # Absolut path of current script
 current_dir = os.path.dirname(__file__)
 print(current_dir)
 
 # relative path of data sets
-dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
-dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
-dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
+dataset_test = os.path.join(current_dir, "Sign Language 2", "test_processed")
 
 # Number of classes in data set
 num_classes = 26
@@ -66,7 +64,7 @@ def get_test_loader(data_dir,
 
     return test_loader
 
-#ViT model 7
+#ViT model 7 und 8
 batch_size = 64
 learning_rate = 10**-4
 num_epochs = 50
@@ -103,7 +101,7 @@ def initialize_model(num_classes):
     model.heads.head = nn.Sequential(
         # Dropout für Regularisierung
         #nn.Dropout(0.5), # dropout ViT model 5
-        nn.Dropout(0.3), # dropout ViT model 7
+        nn.Dropout(0.3), # dropout ViT model 7 und 8
         nn.Linear(model.heads.head.in_features, num_classes)
     )
 
@@ -176,7 +174,7 @@ plt.title('Confusion Matrix Vision Transformer')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
-"""
+
 
 # Create train, val loss and train, val accuracy plots
 import wandb

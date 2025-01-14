@@ -220,7 +220,7 @@ conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 # Visualizing Confusion Matrix
 plt.figure(figsize=(10, 7))
 sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
-plt.title('Confusion Matrix Alexnet')
+plt.title('Confusion Matrix ResNet50')
 plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.show()
