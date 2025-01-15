@@ -18,21 +18,21 @@ from mediapipe_webcam_images import image_processing
 #from LLM_ollama_agent_Newparser import generate_letter_article, create_chain
 import os
 
-# Modell initialisieren
+# initialize model
 def initialize_model(num_classes):
     drop_out_rate = 0.2
-    # Lade das vortrainierte Modell ResNet50
+    # load pretrained ResNet50 model
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     
-    # Alle Schichten einfrieren, außer der letzten
+    # freeze all layers except the last one
     for param in model.parameters():
         param.requires_grad = False
     for param in model.fc.parameters():
         param.requires_grad = True
 
-    # Ersetze die letzte Schicht (Fully Connected Layer)
+    # replace the fully connected layer 
     model.fc = nn.Sequential(
-        nn.Dropout(drop_out_rate),  # Dropout hinzugefügt
+        nn.Dropout(drop_out_rate),  # Dropout 
         nn.Linear(model.fc.in_features, num_classes)
     )
     
@@ -117,8 +117,6 @@ if __name__ == "__main__":
     num_epochs = 50
     num_classes = 26
 
-
-    # Pfad zur JSON-Datei erstellen
     current_dir = os.path.dirname(__file__)
 
     model_path = os.path.join(current_dir, "Models", "resnet50_model_dataset2_5.pth")
@@ -131,6 +129,6 @@ if __name__ == "__main__":
     prediction_alexnet = test_model(model, test_loader)
 
     detected_letter = letter(prediction_alexnet)
-    print(f"Die vorhergesagte Zahl {prediction_alexnet} entspricht dem Buchstaben '{detected_letter}'.")
+    print(f"The predicted number {prediction_alexnet} stands for the letter '{detected_letter}'.")
 
     generate_article(detected_letter)

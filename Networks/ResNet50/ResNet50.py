@@ -23,31 +23,31 @@ from torch.utils.data import DataLoader
 from torchvision.models import resnet50, ResNet50_Weights
 
 
-# Absoluter Pfad des aktuellen Skripts
+# absolut path
 current_dir = os.path.dirname(__file__)
 print(current_dir)
 
-# Verzeichnisse der Datensätze
+# paths of dataset
 dataset_train = os.path.join(current_dir, "Sign Language", "train_processed")
 dataset_val = os.path.join(current_dir, "Sign Language", "val_processed")
 dataset_test = os.path.join(current_dir, "Sign Language", "test_processed")
 
-# Anzahl der Klassen im Datensatz
+# number of classes in dataset
 num_classes = 26
 
-# Geräte-Konfiguration (CPU oder GPU)
+# devicee configuration
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 
 
-# Datenloader für Trainings- und Validierungsdatensätze
+# dataloader for train and validation datasets
 def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, shuffle=True):
     normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
     
-    # Transformation für den Validierungsdatensatz
+    # validation transformation
     valid_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize])
     
-    # Transformation für Trainingsdaten mit Datenaugmentation
+    # augmentation of train data
     if augment:
         train_transform = transforms.Compose([
             transforms.Resize((256, 256)),
@@ -63,11 +63,11 @@ def get_train_valid_loader(data_dir_train, data_dir_valid, batch_size, augment, 
     else:
         train_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize])
 
-    # Lade den Trainings- und Validierungsdatensatz
+    # load train and validataion datasets
     train_dataset = datasets.ImageFolder(root=data_dir_train, transform=train_transform)
     valid_dataset = datasets.ImageFolder(root=data_dir_valid, transform=valid_transform)
 
-    # Erstelle DataLoader für Training und Validierung
+    # create dataloader for train and validation datasets
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
@@ -81,56 +81,56 @@ def get_test_loader(data_dir, batch_size, shuffle=True):
     return test_loader
 
 
-# Erstelle die besten Hyperparameter als Dictionary
+# create hyperparameters as dictionary
 best_params = {
-    'learning_rate': 0.001,  # Beispielwert (Startwert für den Optimierer)
-    'batch_size': 64,      # Beispielwert
-    'num_epochs': 50       # Beispielwert
+    'learning_rate': 0.001, 
+    'batch_size': 64,      
+    'num_epochs': 50       
 }
 
 
-# Trainiere das finale Modell mit den besten Hyperparametern
+# train final model with best hyperparameters
 def train_final_model(best_params, dataset_train, dataset_val, device):
     learning_rate = best_params['learning_rate']
     batch_size = best_params['batch_size']
     num_epochs = best_params['num_epochs']
     
-    # Lade Trainings- und Validierungsdatensatz
+    # load train and validation dataset
     train_loader, valid_loader = get_train_valid_loader(dataset_train, dataset_val, batch_size, augment=True, shuffle=True)
     
-    # Lade das vortrainierte Modell ResNet50
+    # load pretrained ResNet50 model
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     
-    # Alle Schichten einfrieren, außer der letzten
+    # freeze all layers except the last one
     for param in model.parameters():
         param.requires_grad = False
     for param in model.fc.parameters():
         param.requires_grad = True
 
-    # Ersetze die letzte Schicht (Fully Connected Layer)
+    # replace the fully connected layer
     model.fc = nn.Sequential(
-        nn.Dropout(p=0.5),  # Dropout hinzugefügt
+        nn.Dropout(p=0.5),  # Dropout 
         nn.Linear(model.fc.in_features, num_classes)
     )
     
     model = model.to(device)
     
-    # Initialisiere wandb und überwache
+    # initialize wandb 
     wandb.init(project='resnet50_model_dataset2_5', config=best_params)
     wandb.watch(model, log="all")  # Dies funktioniert jetzt nach wandb.init()
     
-    # Verlustfunktion und Optimierer
+    # loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.fc.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.005)
 
-    # Scheduler für OneCycleLR
+    # Scheduler for OneCycleLR
     scheduler = OneCycleLR(
         optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=num_epochs,
         pct_start=0.3, anneal_strategy='cos', cycle_momentum=True,
         base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=1000.0
     )
 
-    # Variablen für Metriken und EarlyStopping
+    # Variables for metrics and EarlyStopping
     best_loss = float('inf')
     best_model_weights = None
     patience = 5
@@ -138,20 +138,20 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
     train_losses, train_accuracies = [], []
     val_losses, val_accuracies = [], []
     
-    # Funktion, um die Lernrate zu bekommen
+    # getting learningrate
     def get_lr(optimizer):
         for param_group in optimizer.param_groups:
             return param_group['lr']
 
-    # Funktion, um das Momentum zu bekommen
+    # getting momentum
     def get_momentum(optimizer):
         return optimizer.param_groups[0]['momentum']
 
-    # Beste Lernrate und Momentum speichern
+    # save best learningrate and momentum
     best_lr = None
     best_momentum = None
 
-    # Trainingsloop
+    # Trainingloop
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -181,7 +181,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         print(f"Training Loss: {epoch_loss:.4f}, Training Accuracy: {epoch_acc:.4f}")
 
-        # Validierung
+        # validation
         model.eval()
         val_loss = 0.0
         val_corrects = 0
@@ -202,7 +202,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
 
         print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
 
-        # Logge Metriken zu wandb
+        # Logging metrics to wandb
         wandb.log({
             "train acc": epoch_acc,
             "train loss": epoch_loss,
@@ -212,7 +212,7 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
             "momentum": current_momentum
         })
 
-        # Speichern der besten Lernrate und des besten Momentums bei der besten Validierungsgenauigkeit
+        
         if val_loss < best_loss:
             best_loss = val_loss
             best_model_weights = copy.deepcopy(model.state_dict())
@@ -227,31 +227,31 @@ def train_final_model(best_params, dataset_train, dataset_val, device):
                 print("Early Stopping")
                 break
 
-    # Modell mit den besten Gewichtungen speichern
+    # save model with best weights
     model.load_state_dict(best_model_weights)
 
-    # Speichern des besten Lernraten- und Momentumwertes
+    # checkpoints
     checkpoint = {
         'train_losses': train_losses,
         'train_accuracies': train_accuracies,
         'val_losses': val_losses,
         'val_accuracies': val_accuracies,
-        'best_lr': best_lr,  # Speichern der besten Lernrate
-        'best_momentum': best_momentum,  # Speichern des besten Momentums
+        'best_lr': best_lr,  
+        'best_momentum': best_momentum, 
         'hyper_params': best_params,
     }
 
-    # Speichern des Modells und der Metriken
+    # save model and metrics
     eval_folder_path = os.path.join(current_dir, "Evaluation_folder")
     os.makedirs(eval_folder_path, exist_ok=True)
     torch.save(checkpoint, os.path.join(eval_folder_path, "resnet_values_dataset2_5.pth"))
 
-   # # W&B beenden
+   # finish w&b
    # wandb.finish()
 
     return model
 
-# Trainiere das finale Modell mit den besten Hyperparametern
+# train final model with best hyperparameters
 final_model = train_final_model(best_params, dataset_train, dataset_val, device)
 
 
@@ -288,7 +288,7 @@ def test_model(model, test_loader):
 
     return test_acc, all_labels_resNet50, all_preds_resNet50
 
-# Testen des finalen Modells
+# test final model
 test_acc, all_labels_resNet50, all_preds_resNet50 = test_model(final_model, test_loader)
 
 # Save the entire model
@@ -493,28 +493,3 @@ os.makedirs(save_path, exist_ok=True)
 create_folder(save_path)
 compute_saliency_and_save()
 print('Saliency maps saved.')
-
-
-"""
-Ausführen des Modells auf den Testdaten
-# Modell und Metriken laden
-checkpoint = torch.load('path_to_saved_model/resnet_values.pth')
-
-# Lade das Modell mit den besten Gewichtungen
-model.load_state_dict(checkpoint['best_model_weights'])
-
-# Lade die besten Hyperparameter und setze sie wieder
-best_lr = checkpoint['best_lr']
-best_momentum = checkpoint['best_momentum']
-
-# Setze den Optimierer und Scheduler mit den gespeicherten Werten
-optimizer = optim.SGD(model.fc.parameters(), lr=best_lr, momentum=best_momentum, weight_decay=0.005)
-scheduler = OneCycleLR(
-    optimizer, max_lr=best_lr, steps_per_epoch=len(train_loader), epochs=best_params['num_epochs'],
-    pct_start=0.3, anneal_strategy='cos', cycle_momentum=True,
-    base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0
-)
-
-# Teste das Modell auf neuen Testdaten
-test_acc, all_labels_resNet50, all_preds_resNet50 = test_model(model, test_loader)
-"""

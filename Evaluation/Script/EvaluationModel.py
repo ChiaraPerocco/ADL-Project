@@ -182,23 +182,23 @@ if False:
         )
 
         transform = transforms.Compose([
-            transforms.Resize((224, 224)),   #Bildgröße anpassen
+            transforms.Resize((224, 224)),   # adjust image size
             transforms.ToTensor(),
             normalize,
         ])
         
 
-        # Lade den Testdatensatz
+        # load test dataset
         test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
-        # Erstellen des DataLoaders für Testdaten
+        # create dataloader for testlaoder
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
         return test_loader
 
     # Load test data
     test_loader = get_test_loader(
-        data_dir= dataset_test, # Pfad zu den Testdaten
+        data_dir= dataset_test, # path for testdata
         batch_size=alexNet_hyper_params['batch_size']
     )
 
@@ -218,8 +218,6 @@ if False:
                 _, preds = torch.max(outputs, 1)
                 test_corrects += torch.sum(preds == labels.data)
 
-
-                # Speichern der Labels und Vorhersagen für spätere Auswertungen
                 all_labels_alexNet.extend(labels.cpu().numpy())
                 all_preds_alexNet.extend(preds.cpu().numpy())
 
@@ -227,11 +225,11 @@ if False:
                 #true_labels = [class_names[i] for i in all_labels_alexNet]
                 #predicted_labels = [class_names[i] for i in all_preds_alexNet]
 
-                # Berechnung der Test Accuracy
+        #calculate test Accuracy
         test_acc_alexNet = test_corrects.double() / len(test_loader.dataset)
         print(f'Test Accuracy: {test_acc_alexNet:.4f}')
 
-        # Berechnung von Precision, Recall und F1-Score
+        # calculate Precision, Recall und F1-Score
         precision_alexNet, recall_alexNet, f1_alexNet, _ = precision_recall_fscore_support(all_labels_alexNet, all_preds_alexNet, average='weighted')
                 
         print(f'Test Accuracy: {test_acc_alexNet:.4f}')
@@ -241,10 +239,10 @@ if False:
                 
         print(f'Labels Testdaten: {all_labels_alexNet}')
         print(f'vorhergesagte Testdaten: {all_preds_alexNet}')
-        # Rückgabe der Metriken
+        # return metrics
         return test_acc_alexNet.item(), precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet
 
-    # Testen auf Testdaten und Speichern der Metriken und label
+    # test and save metrics and labels
     test_acc_alexNet, precision_alexNet, recall_alexNet, f1_alexNet, all_labels_alexNet, all_preds_alexNet = test_model(alexnet_model, test_loader)
 
 ###################################################################################################
@@ -263,23 +261,23 @@ if True:
         )
 
         transform = transforms.Compose([
-            transforms.Resize((224, 224)),   #Bildgröße anpassen
+            transforms.Resize((224, 224)),   # adjust image size
             transforms.ToTensor(),
             normalize,
         ])
         
 
-        # Lade den Testdatensatz
+        # load test dataset
         test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
-        # Erstellen des DataLoaders für Testdaten
+        # create dataloader for testdata
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
         return test_loader
 
     # Load test data
     test_loader = get_test_loader(
-        data_dir= dataset_test, # Pfad zu den Testdaten
+        data_dir= dataset_test, # path for testdata
         batch_size=ViT_hyper_params['batch_size']
     )
 
@@ -300,8 +298,6 @@ if True:
                 _, preds = torch.max(outputs, 1)
                 test_corrects += torch.sum(preds == labels.data)
 
-
-                # Speichern der Labels und Vorhersagen für spätere Auswertungen
                 all_labels_ViT.extend(labels.cpu().numpy())
                 all_preds_ViT.extend(preds.cpu().numpy())
 
@@ -309,11 +305,11 @@ if True:
         #true_labels = [class_names[i] for i in all_labels_resNet50]
         #predicted_labels = [class_names[i] for i in all_preds_resNet50]
 
-        # Berechnung der Test Accuracy
+        # calculate test Accuracy
         test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
         print(f'Test Accuracy: {test_acc_ViT:.4f}')
 
-        # Berechnung von Precision, Recall und F1-Score
+        # calculate Precision, Recall und F1-Score
         precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
         
         print(f'Test Accuracy: {test_acc_ViT:.4f}')
@@ -323,10 +319,10 @@ if True:
         
         print(f'Labels Testdaten: {all_labels_ViT}')
         print(f'vorhergesagte Testdaten: {all_preds_ViT}')
-        # Rückgabe der Metriken
+        # return metrics
         return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
 
-    # Testen auf Testdaten und Speichern der Metriken und label
+    # test and save metrics and labels
     test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(ViT_model, test_loader)
 
 ###################################################################################################
@@ -344,19 +340,18 @@ if True:
             std=[0.229, 0.224, 0.225],
         )
         transform = transforms.Compose([
-            transforms.Resize((224, 224)),   #Bildgröße anpassen
-            transforms.ToTensor(),
+            transforms.Resize((224, 224)),   # adjust image size
             normalize,
         ])
         
-        # Lade den Testdatensatz
+        # load test dataset
         test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-        # Erstellen des DataLoaders für Testdaten
+        # create dataloader for testdata
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
         return test_loader
     # Load test data
     test_loader = get_test_loader(
-        data_dir= dataset_test, # Pfad zu den Testdaten
+        data_dir= dataset_test, #path for testdata
         batch_size=resnet50_hyper_params['batch_size']
     )
     # Test the model on the test data
@@ -372,16 +367,15 @@ if True:
                 outputs = model(inputs)
                 _, preds = torch.max(outputs, 1)
                 test_corrects += torch.sum(preds == labels.data)
-                # Speichern der Labels und Vorhersagen für spätere Auswertungen
                 all_labels_resNet50.extend(labels.cpu().numpy())
                 all_preds_resNet50.extend(preds.cpu().numpy())
         # Convert numerical labels and predictions to class names
         #true_labels = [class_names[i] for i in all_labels_resNet50]
         #predicted_labels = [class_names[i] for i in all_preds_resNet50]
-        # Berechnung der Test Accuracy
+        # calculate test Accuracy
         test_acc_resNet50 = test_corrects.double() / len(test_loader.dataset)
         print(f'Test Accuracy: {test_acc_resNet50:.4f}')
-        # Berechnung von Precision, Recall und F1-Score
+        # calculate Precision, Recall und F1-Score
         precision_resNet50, recall_resNet50, f1_resNet50, _ = precision_recall_fscore_support(all_labels_resNet50, all_preds_resNet50, average='weighted')
         
         print(f'Test Accuracy: {test_acc_resNet50:.4f}')
@@ -391,9 +385,9 @@ if True:
         
         print(f'Labels Testdaten: {all_labels_resNet50}')
         print(f'vorhergesagte Testdaten: {all_preds_resNet50}')
-        # Rückgabe der Metriken
+        # return metrics
         return test_acc_resNet50.item(), precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50
-    # Testen auf Testdaten und Speichern der Metriken und label
+    # test and save metrics and labels
     test_acc_resNet50, precision_resNet50, recall_resNet50, f1_resNet50, all_labels_resNet50, all_preds_resNet50 = test_model(resnet50_model, test_loader)
 
 
@@ -429,7 +423,6 @@ if False:
 
     # Adding values on top of the bars
     for i in range(len(AlexNet_bar)):
-        # Runde die Werte auf 4 Dezimalstellen und platziere sie direkt auf den Balken
         plt.text(br1[i], AlexNet_bar[i], f'{round(AlexNet_bar[i], 4)}', ha='center', fontsize=18)
         plt.text(br2[i], ResNet50_bar[i], f'{round(ResNet50_bar[i], 4)}', ha='center', fontsize=18)
         plt.text(br3[i], ViT_bar[i], f'{round(ViT_bar[i], 4)}', ha='center', fontsize=18)
@@ -441,20 +434,19 @@ if False:
     plt.xticks([r + barWidth for r in range(len(AlexNet_bar))], 
             ['F-Measure', 'Accuracy', 'Precision'], fontsize = 24)
 
-    # Setze die Schriftgröße für die Ticks auf der x- und y-Achse
-    plt.yticks(fontsize=24)  # Ändere die Schriftgröße für die y-Achse
+    plt.yticks(fontsize=24)  
 
     # Set larger font for legend and labels
     plt.legend(fontsize=24, bbox_to_anchor=(0.98, 1), loc='upper left')
     plt.show() 
-    plt.clf()  # Löscht die Figur für den nächsten Plot
+    plt.clf()  
 
 
 ###################################################################################################
 ### Evaluation: ResNet50
 ###################################################################################################
 if True:
-    ### Confusion Matrix:
+    ### Confusion Matrix
     conf_matrix_resNet50 = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
 
     # Visualizing Confusion Matrix
@@ -508,7 +500,7 @@ if True:
 ### Evaluation: AlexNet
 ###################################################################################################
 if False:
-    ### Confusion Matrix:
+    ### Confusion Matrix
     conf_matrix_alexNet = confusion_matrix(all_labels_alexNet, all_preds_alexNet)
 
     # Visualizing Confusion Matrix
@@ -562,7 +554,7 @@ if False:
 ### Evaluation: Vision Transformer
 ###################################################################################################
 if True:
-    ### Confusion Matrix:
+    ### Confusion Matrix
     conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
     # Visualizing Confusion Matrix
@@ -619,7 +611,7 @@ if True:
 if True:
     conf_matrix_resNet50 = confusion_matrix(all_labels_resNet50, all_preds_resNet50)
 
-    # Visualisierung der Confusion Matrix
+    # Visulizing Confusion Matrix
     plt.figure(figsize=(10, 7))
     sns.heatmap(conf_matrix_resNet50, annot=True, fmt='g', cmap='Blues', cbar=False)
     plt.title('Confusion Matrix ResNet50')
@@ -627,13 +619,13 @@ if True:
     plt.ylabel('True labels')
     plt.show()
 
-    plt.clf()  # Löscht die Figur für den nächsten Plot
+    plt.clf()  
 
 if True:
     # Confusion Matrix: ViT
     conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
-    # Visualisierung der Confusion Matrix
+    # Visulizing Confusion Matrix
     plt.figure(figsize=(10, 7))
     sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
     plt.title('Confusion Matrix Vision Transformer')
@@ -641,13 +633,13 @@ if True:
     plt.ylabel('True labels')
     plt.show()
 
-    plt.clf()  # Löscht die Figur für den nächsten Plot
+    plt.clf()  
 
 if False:
     # Confusion Matrix: AlexNet
     conf_matrix_alexNet = confusion_matrix(all_labels_alexNet, all_preds_alexNet)
 
-    # Visualisierung der Confusion Matrix
+    # Visualizing Confusion Matrix
     plt.figure(figsize=(10, 7))
     sns.heatmap(conf_matrix_alexNet, annot=True, fmt='g', cmap='Blues', cbar=False)
     plt.title('Confusion Matrix AlexNet')
@@ -661,7 +653,7 @@ if False:
     # Confusion Matrix: ViT
     conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
-    # Visualisierung der Confusion Matrix
+    # Visualizing Confusion Matrix
     plt.figure(figsize=(10, 7))
     sns.heatmap(conf_matrix_ViT, annot=True, fmt='g', cmap='Blues', cbar=False)
     plt.title('Confusion Matrix Vision Transformer')
@@ -669,4 +661,4 @@ if False:
     plt.ylabel('True labels')
     plt.show()
 
-    plt.clf()  # Löscht die Figur für den nächsten Plot
+    plt.clf()  

@@ -50,16 +50,16 @@ def get_test_loader(data_dir,
     )
 
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),   #Bildgröße anpassen
+        transforms.Resize((224, 224)),   # adjust image size
         transforms.ToTensor(),
         normalize,
     ])
     
 
-    # Lade den Testdatensatz
+    # load test dataset
     test_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
-    # Erstellen des DataLoaders für Testdaten
+    # create dataloader for test data
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
     return test_loader
@@ -79,7 +79,7 @@ best_params = {
 
 # Load test data
 test_loader = get_test_loader(
-    data_dir= dataset_test, # Pfad zu den Testdaten
+    data_dir= dataset_test, # path of testdata
     batch_size=best_params['batch_size']
 )
 
@@ -138,7 +138,7 @@ class AlexNet(nn.Module):
         return out
 
 
-# Modell initialisieren
+# initialize model
 def initialize_model(num_classes):
     model = AlexNet(num_classes).to(device) 
     return model
@@ -170,8 +170,6 @@ def test_model(model, test_loader):
             _, preds = torch.max(outputs, 1)
             test_corrects += torch.sum(preds == labels.data)
 
-
-            # Speichern der Labels und Vorhersagen für spätere Auswertungen
             all_labels_ViT.extend(labels.cpu().numpy())
             all_preds_ViT.extend(preds.cpu().numpy())
 
@@ -179,10 +177,10 @@ def test_model(model, test_loader):
     true_labels = [class_names[i] for i in all_labels_ViT]
     predicted_labels = [class_names[i] for i in all_preds_ViT]
 
-    # Berechnung der Test Accuracy
+    # calculate accuracy
     test_acc_ViT = test_corrects.double() / len(test_loader.dataset)
     print(f'Test Accuracy: {test_acc_ViT:.4f}')
-    # Berechnung von Precision, Recall und F1-Score
+    # calculate Precision, Recall und F1-Score
     precision_ViT, recall_ViT, f1_ViT, _ = precision_recall_fscore_support(all_labels_ViT, all_preds_ViT, average='weighted')
         
     print(f'Test Accuracy: {test_acc_ViT:.4f}')
@@ -192,14 +190,14 @@ def test_model(model, test_loader):
         
     print(f'Labels Testdaten: {true_labels}')
     print(f'vorhergesagte Testdaten: {predicted_labels}')
-    # Rückgabe der Metriken
+    # return metrics
     return test_acc_ViT.item(), precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT
 
-# Testen auf Testdaten und Speichern der Metriken und label
+# test testdata abd save metrics and labels
 test_acc_ViT, precision_ViT, recall_ViT, f1_ViT, all_labels_ViT, all_preds_ViT = test_model(model, test_loader)
 
 
-### Confusion Matrix:
+### Confusion Matrix
 conf_matrix_ViT = confusion_matrix(all_labels_ViT, all_preds_ViT)
 
 # Visualizing Confusion Matrix
@@ -214,8 +212,7 @@ plt.show()
 # Create train, val loss and train, val accuracy plots
 import wandb
 api = wandb.Api()
-run = api.run("annaretr01-hochschule-m-nchen/alexNet_model_dataset2_4/fqi3euux")  # Beispiel: "username/projectname/run-id"
-# Verfügbare Spalten anzeigen
+run = api.run("annaretr01-hochschule-m-nchen/alexNet_model_dataset2_4/fqi3euux")  
 history = run.history(keys=["train_loss", "train_acc", "val_loss", "val_acc"])
 print(history["train_loss"])
 

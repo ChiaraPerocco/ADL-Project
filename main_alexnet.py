@@ -1,3 +1,9 @@
+###################################################################################################
+#
+# Main File
+#
+###################################################################################################
+
 import os
 import torch
 import torch.nn as nn
@@ -145,12 +151,10 @@ if __name__ == "__main__":
     num_classes = 26
 
 
-    # Pfad zur JSON-Datei erstellen
     current_dir = os.path.dirname(__file__)
 
     model_path = os.path.join(current_dir, "Models", "alexnet_model_dataset2_4.pth")
     model = initialize_model(num_classes)
-    #final_model = torch.load("./alexnet_model_dataset2_4.pth", map_location=torch.device('cpu'), weights_only=True)
     final_model = torch.load(model_path, map_location=torch.device('cpu'), weights_only=True)
     model.load_state_dict(final_model)
     model.eval()
@@ -159,6 +163,6 @@ if __name__ == "__main__":
     prediction_alexnet = test_model(model, test_loader)
 
     detected_letter = letter(prediction_alexnet)
-    print(f"Die vorhergesagte Zahl {prediction_alexnet} entspricht dem Buchstaben '{detected_letter}'.")
+    print(f"The predicted number {prediction_alexnet} stands for the letter '{detected_letter}'.")
 
     generate_article(detected_letter)
