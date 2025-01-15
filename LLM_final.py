@@ -318,13 +318,15 @@ def generate_article(detected_letter):
             pipeline = DiffusionPipeline.from_pretrained("kakaobrain/karlo-v1-alpha")
             pipeline.to("cuda") if torch.cuda.is_available() else torch.device('cpu')
 
-            """
+            
             prompts = [
                 f"an image of the {detected_letter}",
                 "an image of the alphabet ABC",
                 f"an image showing the sign of the {detected_letter} in american sign language",
                 "An image about the American Sign Language Alphabet"
             ]
+            
+            #prompt for default images
             """
             prompts = [
                 "A highly detailed and realistic image of American Sign Language hand gestures, showing the alphabet letter 'A' with a light background, in a natural and educational setting.",
@@ -332,6 +334,7 @@ def generate_article(detected_letter):
                 "An educational poster design showing the entire American Sign Language (ASL) alphabet on colorful wooden signposts, with each hand gesture displayed above the corresponding letter.",
                 "A set of diverse hand gestures in American Sign Language with realistic hands of various skin tones and a clean white background."
             ]
+            """
             
             image_paths = []
             for i, prompt in enumerate(prompts, 1):
