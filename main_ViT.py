@@ -126,6 +126,6 @@ if __name__ == "__main__":
     prediction_alexnet = test_model(model, test_loader)
 
     detected_letter = letter(prediction_alexnet)
-    print(f"Die vorhergesagte Zahl {prediction_alexnet} entspricht dem Buchstaben '{detected_letter}'.")
+    print(f"The predicted number {prediction_alexnet} stands for the letter '{detected_letter}'.")
 
     generate_article(detected_letter)
