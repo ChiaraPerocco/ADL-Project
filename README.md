@@ -29,6 +29,8 @@ Authors: Anna Reiter, Chiara Perocco
 
 - **Dataset**  
   The `Sign Language` folder contains `ds1`, while the `Sign Language 2` folder contains `ds2`.
+  The `Data_split.py` script is used to select a subset of the original datasets and split them into training, validation, and test datasets.
+  The `mediapipe_test.py` script further extends these datasets by generating images that focus exclusively on the hand regions. The extended datasets are then saved with the suffix `_processed`. These processed datasets were subsequently used for training.
 
 - **Webcam**  
   Webcam images are stored in the `webcam_images` folder. These images are processed by the `mediapipe_webcam_images.py` script, and the processed images are then used for letter classification.  
