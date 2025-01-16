@@ -19,6 +19,9 @@ Authors: Anna Reiter, Chiara Perocco
 
 #### Project Structure
 
+- **Domain** 
+  The folder `Domain` contains an Image of the American Sign Language Alphabet. These signs can be classificated through the project. The numbers in the image stands for the classes in the dataset.
+
 - **Model Training**  
   The scripts for training the AlexNet, ResNet50, and Vision Transformer models are located in the `Networks` folder.  
   We have separate files for training each model. For some models, Optuna was used to automatically adjust the hyperparameters (see `AlexNet.py` and `VisionTransformer.py`). However, due to the high computational resources required, we decided to manually adjust the hyperparameters by running different experiments.
