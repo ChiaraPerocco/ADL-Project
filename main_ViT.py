@@ -30,7 +30,7 @@ def initialize_model(num_classes):
     model.heads.head = nn.Sequential(
         # Dropout for regularization
         #nn.Dropout(0.5), # dropout ViT model 5
-        nn.Dropout(0.3), # dropout ViT model 7
+        nn.Dropout(drop_out_rate), # dropout ViT model 7
         nn.Linear(model.heads.head.in_features, num_classes)
     )
 
@@ -110,9 +110,8 @@ if __name__ == "__main__":
 
 
     batch_size = 64
-    learning_rate = 0.0001
-    num_epochs = 30
     num_classes = 26
+    drop_out_rate = 0.3
 
     current_dir = os.path.dirname(__file__)
 

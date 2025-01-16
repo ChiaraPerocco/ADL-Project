@@ -146,8 +146,6 @@ if __name__ == "__main__":
     dir_path = os.path.join(current_dir, "webcam_images_processed")
 
     batch_size = 64
-    learning_rate = 0.0008
-    num_epochs = 50
     num_classes = 26
 
 

@@ -20,7 +20,6 @@ import os
 
 # initialize model
 def initialize_model(num_classes):
-    drop_out_rate = 0.2
     # load pretrained ResNet50 model
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     
@@ -113,8 +112,7 @@ if __name__ == "__main__":
     dir_path = os.path.join(current_dir, "webcam_images_processed")
 
     batch_size = 64
-    learning_rate = 0.001
-    num_epochs = 50
+    drop_out_rate = 0.2
     num_classes = 26
 
     current_dir = os.path.dirname(__file__)

@@ -36,6 +36,7 @@ Authors: Anna Reiter, Chiara Perocco
   The `mediapipe_test.py` script further extends these datasets by generating images that focus exclusively on the hand regions. The extended datasets are then saved with the suffix `_processed`. These processed datasets were subsequently used for training.
 
 - **Webcam**  
+  When running `main_ViT.py`, `main_resnet50.py`, or `main_alexnet.py`, the webcam will open. Once you position your hand to form a letter, press _y_ (yes) to capture the image or _n_ (no) to cancel the capture.
   Webcam images are stored in the `webcam_images` folder. These images are processed by the `mediapipe_webcam_images.py` script, and the processed images are then used for letter classification.  
   The webcam is initialized with index 0 in the `Webcam.py` file, which uses the internal webcam of your device. To use an external webcam, change the index to 1.  
   If an error occurs while executing the main function, it might be due to the `mediapipe_webcam_images.py` script not recognizing a hand in the image. In this case, the message "Hand wurde nicht erkannt. Nehme noch ein Foto auf" will be printed.  
