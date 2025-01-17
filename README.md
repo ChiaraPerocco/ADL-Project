@@ -41,6 +41,7 @@ Authors: Anna Reiter, Chiara Perocco
   The webcam is initialized with index 0 in the `Webcam.py` file, which uses the internal webcam of your device. To use an external webcam, change the index to 1.  
   If an error occurs while executing the main function, it might be due to the `mediapipe_webcam_images.py` script not recognizing a hand in the image. In this case, the message "Hand wurde nicht erkannt. Nehme noch ein Foto auf" will be printed.  
   Please check the processed image in the `webcam_images_processed` folder as it can sometimes be distorted. This distortion can make it difficult to recognise the correct letter. For best letter classification results, keep a reasonable distance from the webcam and exaggerate hand gestures to improve recognition.
+  Only one image is allowed in the `webcam_images` and `webcam_images_processed` folder. This is automatically implemented by deleting the old image each time a new one is taken. If an error occurs, check if there is more than one image in the folder.
 
 - **Article Generation**  
   The final language model (LLM) is produced in the `LLM_final.py` file. This file contains the agent, tools, and article generation process.  
